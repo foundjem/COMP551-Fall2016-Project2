@@ -64,57 +64,26 @@ if __name__ == '__main__':
 	############################################
 	print "Reading files........................",
 	sys.stdout.flush()
-	
-	with open('train_in.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		train_data = [[int(x) for x in l[1:]] for l in list(reader)]
-	
-	with open('all_train_in.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		train_all_data = [[int(x) for x in l[1:]] for l in list(reader)]
-	
-	with open('validation_in.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		val_data = [[int(x) for x in l[1:]] for l in list(reader)]
-	
-	with open('test_in.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		test_data = [[int(x) for x in l[1:]] for l in list(reader)]
-	
-	with open('train_out.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		train_labels = [l[1] for l in list(reader)]
-	
-	with open('all_train_out.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		train_all_labels = [l[1] for l in list(reader)]
-	
-	with open('validation_out.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		val_labels = [l[1] for l in list(reader)]
 
+	X_trn = np.genfromtxt('X_trn.csv', delimiter=',', dtype=int)
+	X_val = np.genfromtxt('X_val.csv', delimiter=',', dtype=int)
+	X_all = np.genfromtxt('X_all.csv', delimiter=',', dtype=int)
+	X_tst = np.genfromtxt('X_tst.csv', delimiter=',', dtype=int)
 
-	X_train = np.array(train_data)
-	X_val = np.array(val_data)
-	X_train2 = np.array(train_all_data)
-	X_test = np.array(test_data)
-	
-	Y_train = np.array(train_labels)
-	Y_val = np.array(val_labels)
-	Y_train2 = np.array(train_all_labels)
+	ids_trn, X_trn = X_trn[:,0][:,None], X_trn[:,1:]
+	ids_val, X_val = X_val[:,0][:,None], X_val[:,1:]
+	ids_all, X_all = X_all[:,0][:,None], X_all[:,1:]
+	ids_tst, X_tst = X_tst[:,0][:,None], X_tst[:,1:]
+
+	Y_trn = np.genfromtxt('Y_trn.csv', delimiter=',', dtype=str, usecols=[1])
+	Y_val = np.genfromtxt('Y_val.csv', delimiter=',', dtype=str, usecols=[1])
+	Y_all = np.genfromtxt('Y_all.csv', delimiter=',', dtype=str, usecols=[1])
 	print "Done."
 
 	print "Training classifier..................",
 	sys.stdout.flush()
-	clf = GridSearchCV(multinomial_nb(), {'alpha':[0.0001,0.001,0.01,0.1,1,10,100]}, cv=5)
-	clf.fit(X_train, Y_train)
+	clf = GridSearchCV(multinomial_nb(), {'alpha':[0.0001,0.001,0.01,0.1,1,10]}, cv=10)
+	clf.fit(X_trn, Y_trn)
 	nb = clf.best_estimator_
 	print "Done."
 
@@ -124,21 +93,24 @@ if __name__ == '__main__':
 	print "Done."
 	print "Accuracy:  %f" % (np.sum(Y_val == fitted) / float(fitted.size))
 
-
 	print "Training on all data.................",
 	sys.stdout.flush()
-	clf = GridSearchCV(multinomial_nb(), {'alpha':[0.0001,0.001,0.01,0.1,1,10,100]}, cv=5)
-	clf.fit(X_train2, Y_train2)
+	clf = GridSearchCV(multinomial_nb(), {'alpha':[0.0001,0.001,0.01,0.1,1,10]}, cv=10)
+	clf.fit(X_all, Y_all)
 	nb = clf.best_estimator_
-	fitted = nb.predict(X_test)
-
-
-	with open('test_out.csv', 'wb') as f:
-		writer = csv.writer(f, delimiter=',')
-		writer.writerow(['id','category'])
-		for id,pred in enumerate(fitted):
-			writer.writerow([id,pred])
-
+	print "Done."
+	
+	print "Predicting labels for unseen data....",
+	sys.stdout.flush()
+	Y_tst = nb.predict(X_tst)
+	print "Done."
+	
+	print "Writing to file......................",
+	sys.stdout.flush()
+	Y_tst = np.hstack((ids_tst, Y_tst[:,None]))
+	Y_tst = np.vstack((['id','category'],Y_tst))
+	np.savetxt('Y_tst.csv', Y_tst, delimiter=',', fmt='%s')
+	print "Done."
 
 
 

@@ -111,63 +111,26 @@ if __name__ == '__main__':
 	############################################
 	print "Reading files........................",
 	sys.stdout.flush()
-	
-	with open('train_in.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		train_data = [[int(x) for x in l[1:]] for l in list(reader)]
-	
-	with open('all_train_in.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		train_all_data = [[int(x) for x in l[1:]] for l in list(reader)]
-	
-	with open('validation_in.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		val_data = [[int(x) for x in l[1:]] for l in list(reader)]
-	
-	with open('test_in.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		test_data = [[int(x) for x in l[1:]] for l in list(reader)]
-	
-	with open('train_out.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		train_labels = [l[1] for l in list(reader)]
-	
-	with open('all_train_out.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		train_all_labels = [l[1] for l in list(reader)]
-	
-	with open('validation_out.csv', 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		val_labels = [l[1] for l in list(reader)]
 
-	
-	label_codes = {l:i for i,l in enumerate(list(set(train_all_labels)))}
-	train_labels = [label_codes[l] for l in train_labels]
-	val_labels = [label_codes[l] for l in val_labels]
-	train_all_labels = [label_codes[l] for l in train_all_labels]
-	
-	X_train = np.array(train_data)			> 0
-	X_val = np.array(val_data)				> 0
-	X_train2 = np.array(train_all_data)		> 0
-	X_test = np.array(test_data)			> 0
-	
-	Y_train = np.array(train_labels)
-	Y_val = np.array(val_labels)
-	Y_train2 = np.array(train_all_labels)
-	
+	X_trn = np.genfromtxt('X_trn.csv', delimiter=',', dtype=int)
+	X_val = np.genfromtxt('X_val.csv', delimiter=',', dtype=int)
+	X_all = np.genfromtxt('X_all.csv', delimiter=',', dtype=int)
+	X_tst = np.genfromtxt('X_tst.csv', delimiter=',', dtype=int)
+
+	ids_trn, X_trn = X_trn[:,0][:,None], X_trn[:,1:]
+	ids_val, X_val = X_val[:,0][:,None], X_val[:,1:]
+	ids_all, X_all = X_all[:,0][:,None], X_all[:,1:]
+	ids_tst, X_tst = X_tst[:,0][:,None], X_tst[:,1:]
+
+	Y_trn = np.genfromtxt('Y_trn.csv', delimiter=',', dtype=str, usecols=[1])
+	Y_val = np.genfromtxt('Y_val.csv', delimiter=',', dtype=str, usecols=[1])
+	Y_all = np.genfromtxt('Y_all.csv', delimiter=',', dtype=str, usecols=[1])
 	print "Done."
 
 	print "Training classifier..................",
 	sys.stdout.flush()
 	dt = decision_tree()
-	dt.fit(X_train, Y_train)
+	dt.fit(X_trn, Y_trn)
 	print "Done."
 
 	print "Fitting validation data..............",
