@@ -26,6 +26,11 @@ if __name__ == '__main__':
 	dat_tst = np.array(read_data('datasets/test_in.csv')[1])
 	lab_all = np.array(read_data('datasets/train_out.csv')[1])
 	
+	# Get rid of invalid rows
+	keepers = lab_all[:,1] != 'category'
+	dat_all = dat_all[keepers,:]
+	lab_all = lab_all[keepers,:]
+	
 	# Split into training and validation sets
 	v_split = int(0.8 * dat_all.shape[0])
 	ids_trn = dat_all[:v_split,0].astype(int)
