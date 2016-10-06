@@ -1,5 +1,6 @@
 import sys, csv
 import numpy as np
+import pandas as pd
 from scipy import sparse
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
@@ -53,12 +54,12 @@ if __name__ == '__main__':
 	vectorizer = CountVectorizer(ngram_range=(1,2),
 								 stop_words='english',
 								 lowercase=True,
-								 max_features=1000,
+								 max_features=2000,
 								 min_df=1)
 	ng_vectorizer = CountVectorizer(ngram_range=(2,3),
 									stop_words='english',
 									lowercase=True,
-									max_features=400,
+									max_features=200,
 									min_df=1)
 	print "Done."
 
