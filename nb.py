@@ -14,22 +14,22 @@ class multinomial_nb(object):
 		self.labels = dict(enumerate(uniques))
 		
 		# Separate samples by class
-		subs = [[x for x, c1 in zip(X, y) if c1 == c0] for c0 in uniques]
-		
+		subs = [X[rows,:] for rows in y == uniques[:,None]]
+
 		# Individual word counts by class
-		counts_by_class = np.array([np.sum(np.array(s),axis=0) for s in subs])
+		counts_by_class = np.vstack([s.sum(axis=0) for s in subs])
 		
 		# Add smoothing term
 		counts_by_class = counts_by_class + self.alpha
 		
 		# Total counts by class
-		totals = np.sum(counts_by_class, axis=1).astype(float)
+		totals = counts_by_class.sum(axis=1).astype(float)
 		
 		# Feature log probabilities
 		self.w_ = np.log(counts_by_class / totals[:,None]).T
 		
 		# Append the class log priors
-		self.w_ = np.append(self.w_, np.log(counts/float(n))[None], axis=0)
+		self.w_ = np.vstack((self.w_, np.log(counts/float(n))[None]))
 	
 		return self
 	
@@ -43,9 +43,11 @@ class multinomial_nb(object):
 		codes = np.argmax(self.log_probabilities(X), axis=1)
 		return np.array([self.labels[c] for c in codes])
 
-	def score(self, X, y):
+	def score(self, X, y, return_prediction=False):
 		predicted = self.predict(X)
-		return np.sum(y == predicted) / float(y.size)
+		accuracy = np.sum(y == predicted) / float(y.size)
+		if return_prediction: return (accuracy, predicted)
+		return accuracy
 
 	def get_params(self, deep=True):
 		return {'alpha':self.alpha}
