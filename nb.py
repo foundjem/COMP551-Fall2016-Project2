@@ -1,6 +1,7 @@
 import sys, csv
 import numpy as np
 from sklearn.grid_search import GridSearchCV
+from sklearn.cross_validation import cross_val_score
 
 class multinomial_nb(object):
 	def __init__(self, alpha=1.0):
@@ -58,6 +59,65 @@ class multinomial_nb(object):
 		return self
 
 
+class bernoulli_nb(object):
+	def __init__(self, alpha=1.0):
+		self.alpha = alpha
+		
+	def fit(self, X, y):
+		X = X.astype(bool)
+		n,m = X.shape
+		uniques, counts = np.unique(y, return_counts=True)
+
+		# Store label names for later access
+		self.labels = dict(enumerate(uniques))
+
+		# Separate samples by class
+		subs = [X[rows,:] for rows in y == uniques[:,None]]
+
+		# Individual word counts by class
+		counts_by_class = np.vstack([s.sum(axis=0) for s in subs])
+
+		# Add smoothing term
+		counts_by_class = counts_by_class + self.alpha
+
+		# Total counts by class
+		totals = counts_by_class.sum(axis=1).astype(float)
+	
+		# Feature probabilities
+		self.w_ = (counts_by_class / (counts+self.alpha*2.0)[:,None]).T
+		self.w_ = np.log(np.vstack((self.w_, 1.0 - self.w_)))
+		
+		# Append the class log priors
+		self.w_ = np.vstack((self.w_, np.log(counts/float(n))[None]))
+	
+		return self
+	
+	def log_probabilities(self, X):
+		X0 = np.logical_not(X)
+		X1 = np.logical_not(X0)
+		X = np.hstack((X1,X0,np.ones((X.shape[0],1))))
+		# Add column of ones for the bias term
+		return X.dot(self.w_)
+
+	def predict(self, X):
+		# Report class with highest probability
+		codes = np.argmax(self.log_probabilities(X), axis=1)
+		return np.array([self.labels[c] for c in codes])
+
+	def score(self, X, y, return_prediction=False):
+		predicted = self.predict(X)
+		accuracy = np.sum(y == predicted) / float(y.size)
+		if return_prediction: return (accuracy, predicted)
+		return accuracy
+
+	def get_params(self, deep=True):
+		return {'alpha':self.alpha}
+
+	def set_params(self, **parameters):
+		for parameter, value in parameters.items():
+			setattr(self, parameter, value)
+		return self
+
 
 if __name__ == '__main__':
 
@@ -84,34 +144,52 @@ if __name__ == '__main__':
 
 	print "Training classifier..................",
 	sys.stdout.flush()
-	clf = GridSearchCV(multinomial_nb(), {'alpha':[0.0001,0.001,0.01,0.1,1,10]}, cv=10)
-	clf.fit(X_trn, Y_trn)
-	nb = clf.best_estimator_
+	m_nb = GridSearchCV(multinomial_nb(),{'alpha':[0.0001,0.001,0.01,0.1,1,10]},cv=10)
+	b_nb = GridSearchCV(bernoulli_nb(),{'alpha':[0.0001,0.001,0.01,0.1,1,10]},cv=10)
+						
+	m_nb.fit(X_trn, Y_trn)
+	b_nb.fit(X_trn, Y_trn)
+	
+	m_nb = m_nb.best_estimator_
+	b_nb = b_nb.best_estimator_
 	print "Done."
 
 	print "Testing on validation data...........",
 	sys.stdout.flush()
-	fitted = nb.predict(X_val)
+	m_accuracy, m_fitted = m_nb.score(X_val, Y_val, return_prediction=True)
+	b_accuracy, b_fitted = b_nb.score(X_val, Y_val, return_prediction=True)
 	print "Done."
-	print "Accuracy:  %f" % (np.sum(Y_val == fitted) / float(fitted.size))
 
 	print "Training on all data.................",
 	sys.stdout.flush()
-	clf = GridSearchCV(multinomial_nb(), {'alpha':[0.0001,0.001,0.01,0.1,1,10]}, cv=10)
-	clf.fit(X_all, Y_all)
-	nb = clf.best_estimator_
+	m_scores = cross_val_score(m_nb, X_all, Y_all, cv=10)
+	b_scores = cross_val_score(b_nb, X_all, Y_all, cv=10)
+	m_nb.fit(X_all, Y_all)
+	b_nb.fit(X_all, Y_all)
 	print "Done."
+	print "Multinomial:"
+	print "   Validation set accuracy:  %f" % m_accuracy
+	print "   Cross-validated accuracy: %f" % np.mean(m_scores)
+	print "Bernoulli:"
+	print "   Validation set accuracy:  %f" % b_accuracy
+	print "   Cross-validated accuracy: %f" % np.mean(b_scores)
 	
 	print "Predicting labels for unseen data....",
 	sys.stdout.flush()
-	Y_tst = nb.predict(X_tst)
+	m_Y_tst = m_nb.predict(X_tst)
+	b_Y_tst = b_nb.predict(X_tst)
 	print "Done."
 	
 	print "Writing to file......................",
 	sys.stdout.flush()
-	Y_tst = np.hstack((ids_tst, Y_tst[:,None]))
-	Y_tst = np.vstack((['id','category'],Y_tst))
-	np.savetxt('Y_tst.csv', Y_tst, delimiter=',', fmt='%s')
+	m_Y_tst = np.hstack((ids_tst, m_Y_tst[:,None]))
+	b_Y_tst = np.hstack((ids_tst, b_Y_tst[:,None]))
+	
+	m_Y_tst = np.vstack((['id','category'], m_Y_tst))
+	b_Y_tst = np.vstack((['id','category'], b_Y_tst))
+	
+	np.savetxt('Y_tst_MULTINOMIAL.csv', m_Y_tst, delimiter=',', fmt='%s')
+	np.savetxt('Y_tst_BERNOULLI.csv', b_Y_tst, delimiter=',', fmt='%s')
 	print "Done."
 
 
