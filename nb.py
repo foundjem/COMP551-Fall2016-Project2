@@ -120,6 +120,26 @@ class bernoulli_nb(object):
 		return self
 
 
+def oversample(X,y):
+	uniques, counts = np.unique(y,return_counts=True)
+	
+	# Separate samples by class
+	subs = [X[rows,:] for rows in y == uniques[:,None]]
+	
+	# Random sample function
+	nb_samples = np.max(counts)
+	sample = lambda n: np.random.randint(n, size=nb_samples)
+	
+	# Oversample X and y
+	X = np.vstack([s[sample(s.shape[0]),:] for s in subs])
+	y = uniques.repeat(nb_samples)
+	
+	# Shuffle
+	p = np.random.permutation(y.shape[0])
+	return (X[p],y[p])
+
+
+
 if __name__ == '__main__':
 
 	############################################
