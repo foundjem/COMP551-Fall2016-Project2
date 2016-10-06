@@ -112,19 +112,19 @@ if __name__ == '__main__':
 	print "Reading files........................",
 	sys.stdout.flush()
 
-	X_trn = np.genfromtxt('X_trn.csv', delimiter=',', dtype=int)
-	X_val = np.genfromtxt('X_val.csv', delimiter=',', dtype=int)
-	X_all = np.genfromtxt('X_all.csv', delimiter=',', dtype=int)
-	X_tst = np.genfromtxt('X_tst.csv', delimiter=',', dtype=int)
+	X_trn = pd.read_csv('X_trn.csv', dtype=int, header=None).values
+	X_val = pd.read_csv('X_val.csv', dtype=int, header=None).values
+	X_all = pd.read_csv('X_all.csv', dtype=int, header=None).values
+	X_tst = pd.read_csv('X_tst.csv', dtype=int, header=None).values
 
 	ids_trn, X_trn = X_trn[:,0][:,None], X_trn[:,1:]
 	ids_val, X_val = X_val[:,0][:,None], X_val[:,1:]
 	ids_all, X_all = X_all[:,0][:,None], X_all[:,1:]
 	ids_tst, X_tst = X_tst[:,0][:,None], X_tst[:,1:]
 
-	Y_trn = np.genfromtxt('Y_trn.csv', delimiter=',', dtype=str, usecols=[1])
-	Y_val = np.genfromtxt('Y_val.csv', delimiter=',', dtype=str, usecols=[1])
-	Y_all = np.genfromtxt('Y_all.csv', delimiter=',', dtype=str, usecols=[1])
+	Y_trn = pd.read_csv('Y_trn.csv', usecols=[1], header=None).values.flatten()
+	Y_val = pd.read_csv('Y_val.csv', usecols=[1], header=None).values.flatten()
+	Y_all = pd.read_csv('Y_all.csv', usecols=[1], header=None).values.flatten()
 	print "Done."
 
 	print "Training classifier..................",

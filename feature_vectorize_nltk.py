@@ -22,9 +22,9 @@ if __name__ == '__main__':
 	############################################
 	print "Reading files........................",
 	sys.stdout.flush()
-	dat_all = np.array(read_data('datasets/train_in.csv')[1])
-	dat_tst = np.array(read_data('datasets/test_in.csv')[1])
-	lab_all = np.array(read_data('datasets/train_out.csv')[1])
+	dat_all = pd.read_csv('datasets/train_in.csv').values
+	dat_tst = pd.read_csv('datasets/test_in.csv').values
+	lab_all = pd.read_csv('datasets/train_out.csv').values
 	
 	# Get rid of invalid rows
 	keepers = lab_all[:,1] != 'category'
