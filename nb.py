@@ -14,6 +14,7 @@ class multinomial_nb(object):
 	
 		# Store label names for later access
 		self.labels = dict(enumerate(uniques))
+		self.to_label = np.vectorize(lambda a: self.labels[a])
 		
 		# Separate samples by class
 		subs = [X[rows,:] for rows in y == uniques[:,None]]
@@ -37,13 +38,20 @@ class multinomial_nb(object):
 	
 	def log_probabilities(self, X):
 		# Add column of ones for the bias term
-		X = np.append(X,np.ones(X.shape[0])[:,None],axis=1)
-		return X.dot(self.w_)
+		X = np.hstack((X,np.ones(X.shape[0])[:,None]))
+		logsumexp = lambda a: np.ma.log(np.sum(np.exp(a),axis=1)).filled(0)[:,None]
+		numerators = X.dot(self.w_)
+		denominators = logsumexp(numerators)
+		return numerators - denominators
 
-	def predict(self, X):
+	def predict(self, X, return_probs=False):
 		# Report class with highest probability
-		codes = np.argmax(self.log_probabilities(X), axis=1)
-		return np.array([self.labels[c] for c in codes])
+		log_probs = self.log_probabilities(X)
+		labels = self.to_label(np.argmax(log_probs, axis=1))
+		if return_probs:
+			probs = np.exp(np.max(log_probs, axis=1))
+			return labels, probs
+		return labels
 
 	def score(self, X, y, return_prediction=False):
 		predicted = self.predict(X)
@@ -220,7 +228,7 @@ if __name__ == '__main__':
 	
 	np.savetxt('Y_tst_MULTINOMIAL.csv', m_Y_tst, delimiter=',', fmt='%s')
 	np.savetxt('Y_tst_BERNOULLI.csv', b_Y_tst, delimiter=',', fmt='%s')
-	print "Done."
+	print "Done.\a"
 
 
 
