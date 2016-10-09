@@ -75,9 +75,12 @@ class TreeNode(object):
         self.false = TreeNode(false_X, false_y)
 
     def entropy_root(self):
+<<<<<<< HEAD
         """
             Calculating entropy of this node
         """
+=======
+>>>>>>> 1508c7ed82458f68e19908e5cfdff95069634c04
         if self.size() == 0:
             return 0
 
@@ -87,9 +90,12 @@ class TreeNode(object):
         return entropy(positive, negative)
 
     def entropy_children(self):
+<<<<<<< HEAD
         """
             Calculating weighted entropy of the children nodes.
         """
+=======
+>>>>>>> 1508c7ed82458f68e19908e5cfdff95069634c04
         assert self.true
         assert self.false
 
