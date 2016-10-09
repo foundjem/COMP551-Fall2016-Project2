@@ -1,19 +1,30 @@
-import sys, csv
+import sys, csv, re
 import numpy as np
 import pandas as pd
 from scipy import sparse
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
+import nltk
 
 tf_idf = False
 
-def read_data(file):
-	with open(file, 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		data = list(reader)
-	header = {h:i for i,h in enumerate(header)}
-	return header, data
+class stem_tokenizer(object):
+	def __init__(self, stemmer=nltk.stem.SnowballStemmer('english').stem):
+		self.tokenizer = re.compile(r"(?u)\b[a-zA-Z]{2,}\b").findall
+		self.stemmer = stemmer
+	def __call__(self, doc):
+		return [self.stemmer(t) for t in self.tokenizer(doc)]
+
+class lemma_tokenizer(object):
+	def __init__(self):
+		self.tokenizer = re.compile(r"(?u)\b[a-zA-Z]{2,}\b").findall
+		self.td ={'NN':'n','JJ':'a','VB':'v','RB':'r'}
+		self.lmtzr = nltk.stem.WordNetLemmatizer().lemmatize
+	def __call__(self, doc):
+		tokens = self.tokenizer(doc)
+		tags = [(w,t[:2]) for w,t in nltk.pos_tag(tokens)]
+		tags = [(w,self.td[t] if t in self.td else 'n') for w,t in tags]
+		return [self.lmtzr(*pair) for pair in tags]
 
 # Main driver code
 if __name__ == '__main__':
@@ -51,12 +62,13 @@ if __name__ == '__main__':
 
 	print "Building vectorizer..................",
 	sys.stdout.flush()
-	vectorizer = CountVectorizer(ngram_range=(1,2),
+	vectorizer = CountVectorizer(tokenizer=lemma_tokenizer(),
 								 stop_words='english',
 								 lowercase=True,
 								 max_features=2000,
 								 min_df=1)
-	ng_vectorizer = CountVectorizer(ngram_range=(2,3),
+	ng_vectorizer = CountVectorizer(tokenizer=lemma_tokenizer(),
+									ngram_range=(2,3),
 									stop_words='english',
 									lowercase=True,
 									max_features=200,
