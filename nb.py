@@ -156,19 +156,19 @@ if __name__ == '__main__':
 	print "Reading files........................",
 	sys.stdout.flush()
 
-	X_trn = pd.read_csv('X_trn.csv', dtype=int, header=None).values
-	X_val = pd.read_csv('X_val.csv', dtype=int, header=None).values
-	X_all = pd.read_csv('X_all.csv', dtype=int, header=None).values
-	X_tst = pd.read_csv('X_tst.csv', dtype=int, header=None).values
+	X_trn = pd.read_csv('X_trn.csv', dtype=float).values
+	X_val = pd.read_csv('X_val.csv', dtype=float).values
+	X_all = pd.read_csv('X_all.csv', dtype=float).values
+	X_tst = pd.read_csv('X_tst.csv', dtype=float).values
 
-	ids_trn, X_trn = X_trn[:,0][:,None], X_trn[:,1:]
-	ids_val, X_val = X_val[:,0][:,None], X_val[:,1:]
-	ids_all, X_all = X_all[:,0][:,None], X_all[:,1:]
-	ids_tst, X_tst = X_tst[:,0][:,None], X_tst[:,1:]
+	ids_trn, X_trn = X_trn[:,0][:,None].astype(int), X_trn[:,1:]
+	ids_val, X_val = X_val[:,0][:,None].astype(int), X_val[:,1:]
+	ids_all, X_all = X_all[:,0][:,None].astype(int), X_all[:,1:]
+	ids_tst, X_tst = X_tst[:,0][:,None].astype(int), X_tst[:,1:]
 
-	Y_trn = pd.read_csv('Y_trn.csv', usecols=[1], header=None).values.flatten()
-	Y_val = pd.read_csv('Y_val.csv', usecols=[1], header=None).values.flatten()
-	Y_all = pd.read_csv('Y_all.csv', usecols=[1], header=None).values.flatten()
+	Y_trn = pd.read_csv('Y_trn.csv', usecols=[1]).values.flatten()
+	Y_val = pd.read_csv('Y_val.csv', usecols=[1]).values.flatten()
+	Y_all = pd.read_csv('Y_all.csv', usecols=[1]).values.flatten()
 	
 	
 	print "Done."

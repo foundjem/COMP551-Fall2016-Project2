@@ -6,7 +6,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 import nltk
 
-tf_idf = False
+tf_idf = True
 
 class stem_tokenizer(object):
 	def __init__(self, stemmer=nltk.stem.SnowballStemmer('english').stem):
@@ -81,6 +81,8 @@ if __name__ == '__main__':
 	X_trn = sparse.hstack((X_trn, ng_vectorizer.fit_transform(doc_trn)))
 	X_val = vectorizer.transform(doc_val)
 	X_val = sparse.hstack((X_val, ng_vectorizer.transform(doc_val)))
+	header_trn = ['id'] + vectorizer.get_feature_names() + ng_vectorizer.get_feature_names()
+	header_trn = ','.join(header_trn)
 	print "Done."
 	
 	print "Extracting testing features..........",
@@ -89,6 +91,8 @@ if __name__ == '__main__':
 	X_all = sparse.hstack((X_all, ng_vectorizer.fit_transform(doc_all)))
 	X_tst = vectorizer.transform(doc_tst)
 	X_tst = sparse.hstack((X_tst, ng_vectorizer.transform(doc_tst)))
+	header_all = ['id'] + vectorizer.get_feature_names() + ng_vectorizer.get_feature_names()
+	header_all = ','.join(header_all)
 	print "Done."
 	
 	if tf_idf:
@@ -131,12 +135,13 @@ if __name__ == '__main__':
 	print "Writing to file......................",
 	sys.stdout.flush()
 	fmt = '%f' if tf_idf else '%d'
-	np.savetxt('X_trn.csv', X_trn.toarray(), delimiter=',', fmt=fmt)
-	np.savetxt('X_val.csv', X_val.toarray(), delimiter=',', fmt=fmt)
-	np.savetxt('X_all.csv', X_all.toarray(), delimiter=',', fmt=fmt)
-	np.savetxt('X_tst.csv', X_tst.toarray(), delimiter=',', fmt=fmt)
+	ext = '_tfidf.csv' if tf_idf else '.csv'
+	np.savetxt('X_trn'+ext, X_trn.toarray(), delimiter=',', fmt=fmt, header=header_trn)
+	np.savetxt('X_val'+ext, X_val.toarray(), delimiter=',', fmt=fmt, header=header_trn)
+	np.savetxt('X_all'+ext, X_all.toarray(), delimiter=',', fmt=fmt, header=header_all)
+	np.savetxt('X_tst'+ext, X_tst.toarray(), delimiter=',', fmt=fmt, header=header_all)
 	
-	np.savetxt('Y_trn.csv', Y_trn, delimiter=',', fmt='%s')
-	np.savetxt('Y_val.csv', Y_val, delimiter=',', fmt='%s')
-	np.savetxt('Y_all.csv', Y_all, delimiter=',', fmt='%s')
-	print "Done."
+	np.savetxt('Y_trn.csv', Y_trn, delimiter=',', fmt='%s', header='id,category')
+	np.savetxt('Y_val.csv', Y_val, delimiter=',', fmt='%s', header='id,category')
+	np.savetxt('Y_all.csv', Y_all, delimiter=',', fmt='%s', header='id,category')
+	print "Done.\a" # Beep to let you know it's done
