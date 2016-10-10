@@ -2,7 +2,7 @@ import sys
 import math
 import random
 import collections
-from multiprocessing import Pool
+from multiprocessing import Process
 
 import numpy as np
 from sklearn.grid_search import GridSearchCV
@@ -14,9 +14,14 @@ def execute_in_parallel(lambda_list, timeout_seconds = None, max_worker = 8):
 	"""
 		Execute a list of functions in parallel. The functions must take no input.
 	"""
-	p = Pool(max_worker)
+	all_processes = []
+	for l in lambda_list:
+		p = Process(target=l)
+		all_processes.append(p)
+		p.start()
 
-	p.map(lambda_list, xrange(len(lambda_list)))
+	for p in all_processes:
+		p.join()
 
 POSITIVE_VALUE = 1
 NEGATIVE_VALUE = 0
@@ -122,9 +127,25 @@ class TreeNode(object):
 		return (self.true.size() / my_size) * self.true.entropy_root() + (self.false.size() / my_size) * self.false.entropy_root()
 
 
+def min_sparse(X):
+	# return np.min(X)
+
+    if len(X.data) == 0:
+        return 0
+    m = X.data.min()
+    return m if X.getnnz() == X.size else min(m, 0)
+
+def max_sparse(X):
+	# return np.max(X)
+
+    if len(X.data) == 0:
+        return 0
+    m = X.data.max()
+    return m if X.getnnz() == X.size else max(m, 0)
+
 class RandomForest(object):
 	"""Implementation of random forest model"""
-	def __init__(self, metadata = None, k = 20, m = 50):
+	def __init__(self, metadata = None, k = 30, m = 5):
 		super(RandomForest, self).__init__()
 		self.k = k
 		self.m = m
@@ -148,8 +169,8 @@ class RandomForest(object):
 		if feature_type == 'b':
 			return Decision(feature_index, MID_VALUE)
 		else:
-			min_value = np.min(data[:,feature_index])
-			max_value = np.max(data[:,feature_index])
+			min_value = min_sparse(data[:,feature_index])
+			max_value = max_sparse(data[:,feature_index])
 
 			return Decision(feature_index, random.uniform(min_value, max_value))
 
@@ -159,55 +180,62 @@ class RandomForest(object):
 		self.root_nodes = [TreeNode(X, y) for _ in xrange(self.k)]
 		non_zero_leaf_nodes = [[node] for node in self.root_nodes] # List of stacks of nodes to consider
 
-		while len([1 for tree in non_zero_leaf_nodes for leaf in tree]) > 0:
-			# Pick m features randomly
-			selected_features = random.sample(xrange(X.shape[1]), self.m)
+		to_dos = []
+		for tree_index in xrange(self.k):
 
-			to_dos = []
-			for tree_index in xrange(self.k):
-				def job(ignore_this):
-					if len(non_zero_leaf_nodes[tree_index]) == 0:
-						continue
+			def job(current_tree_index):
+				def inner():
+					print "index is %s" % current_tree_index
+					while len(non_zero_leaf_nodes[current_tree_index]) > 0:
+						# Pick m features randomly
+						selected_features = random.sample(xrange(X.shape[1]), self.m)
 
-					# Pick the leaf node from the stack
-					leaf_node = non_zero_leaf_nodes[tree_index].pop()
-					current_entropy = leaf_node.entropy_root()
+						if len(non_zero_leaf_nodes[current_tree_index]) == 0:
+							continue
 
-					min_entropy = 9999999
-					min_decision = None
+						# Pick the leaf node from the stack
+						leaf_node = non_zero_leaf_nodes[current_tree_index].pop()
+						current_entropy = leaf_node.entropy_root()
 
-					# From m features construct m tests and select the best one based on entropy
-					for feature_index in selected_features:
-						decision = self._build_decision(feature_index, leaf_node.X)
-						leaf_node.split(decision)
+						min_entropy = 9999999
+						min_decision = None
 
-						new_entropy = leaf_node.entropy_children()
-						if new_entropy < min_entropy:
-							min_entropy = new_entropy
-							min_decision = decision
+						# From m features construct m tests and select the best one based on entropy
+						for feature_index in selected_features:
+							decision = self._build_decision(feature_index, leaf_node.X)
+							leaf_node.split(decision)
 
-						if new_entropy == 0: # This has to be the smallest
-							break
+							new_entropy = leaf_node.entropy_children()
+							if new_entropy < min_entropy:
+								min_entropy = new_entropy
+								min_decision = decision
 
-					assert min_decision is not None
-					if min_entropy >= current_entropy:
-						print "Warning: Entropy not decreasing"
-						continue
-					leaf_node.split(min_decision) # Assign the chosen decision to this node
+							if new_entropy == 0: # This has to be the smallest
+								break
 
-					# Then delete data from the node to save memory (since data is already saved in the node's children)
-					leaf_node.X = None
-					leaf_node.y = None
+						assert min_decision is not None
+						if min_entropy >= current_entropy:
+							print "Warning: Entropy not decreasing"
+							continue
+						leaf_node.split(min_decision) # Assign the chosen decision to this node
 
-					if leaf_node.true.entropy_root() > 0:
-						non_zero_leaf_nodes[tree_index].append(leaf_node.true)
+						# Then delete data from the node to save memory (since data is already saved in the node's children)
+						leaf_node.X = None
+						leaf_node.y = None
 
-					if leaf_node.false.entropy_root() > 0:
-						non_zero_leaf_nodes[tree_index].append(leaf_node.false)
+						if leaf_node.true.entropy_root() > 0:
+							non_zero_leaf_nodes[current_tree_index].append(leaf_node.true)
 
-				to_dos.append(jobs)
+						if leaf_node.false.entropy_root() > 0:
+							non_zero_leaf_nodes[current_tree_index].append(leaf_node.false)
 
-			execute_in_parallel(to_dos)
+				return inner
+			job(tree_index)()
+		# 	to_dos.append(job(tree_index))
+		# execute_in_parallel(to_dos)
+
+
+
 
 	def predict_single(self, x):
 		results = collections.Counter()
@@ -265,11 +293,11 @@ if __name__ == "__main__":
 #    # X_all = np.genfromtxt('extracted_features/X_all.csv', delimiter=',', dtype=int)
 #    X_tst = np.genfromtxt('extracted_features/X_tst.csv', delimiter=',', dtype=int)
 
-	
-	X_trn = load_sparse_csr('X_trn_tfidf.npz')[:500,:]
-	X_val = load_sparse_csr('X_val_tfidf.npz')[:500,:]
-	X_all = load_sparse_csr('X_all_tfidf.npz')[:500,:]
-	X_tst = load_sparse_csr('X_tst_tfidf.npz')[:500,:]
+	ROW_COUNT = 500
+	X_trn = load_sparse_csr('X_trn_tfidf.npz')[:ROW_COUNT,:]
+	X_val = load_sparse_csr('X_val_tfidf.npz')[:ROW_COUNT,:]
+	X_all = load_sparse_csr('X_all_tfidf.npz')[:ROW_COUNT,:]
+	X_tst = load_sparse_csr('X_tst_tfidf.npz')[:ROW_COUNT,:]
 #	X_all = load_sparse_csr('X_all_cheat_tfidf.npz')
 #	X_tst = load_sparse_csr('X_tst_cheat_tfidf.npz')
 
@@ -289,9 +317,9 @@ if __name__ == "__main__":
 #    Y_val = np.genfromtxt('extracted_features/Y_val.csv', delimiter=',', dtype=str, usecols=[1])
 #    # Y_all = np.genfromtxt('extracted_features/Y_all.csv', delimiter=',', dtype=str, usecols=[1])
 
-	Y_trn = pd.read_csv('Y_trn.csv', usecols=[1],nrows=500).values.flatten()
-	Y_val = pd.read_csv('Y_val.csv', usecols=[1],nrows=500).values.flatten()
-	Y_all = pd.read_csv('Y_all.csv', usecols=[1],nrows=500).values.flatten()
+	Y_trn = pd.read_csv('Y_trn.csv', usecols=[1],nrows=ROW_COUNT).values.flatten()
+	Y_val = pd.read_csv('Y_val.csv', usecols=[1],nrows=ROW_COUNT).values.flatten()
+	Y_all = pd.read_csv('Y_all.csv', usecols=[1],nrows=ROW_COUNT).values.flatten()
 	
 	print "Done."
 
