@@ -159,8 +159,9 @@ def max_sparse(X):
 
 class RandomForest(object):
 	"""Implementation of random forest model"""
-	def __init__(self, metadata = None, k = 3, m = 10, min_node_size = 20):
+	def __init__(self, metadata = None, k = 5, m = 10, min_node_size = 20):
 		super(RandomForest, self).__init__()
+		print "Random forest object with k = {0}, m = {1} and min_node_size = {2}".format(k, m , min_node_size)
 		self.k = k
 		self.m = m
 
@@ -302,6 +303,7 @@ if __name__ == "__main__":
 	# rf.fit(X, y)
 	# rf.score(X, y)
 
+	start_time = time.time()
 	############################################
 	################# Get data #################
 	############################################
@@ -314,10 +316,10 @@ if __name__ == "__main__":
 #    X_tst = np.genfromtxt('extracted_features/X_tst.csv', delimiter=',', dtype=int)
 
 	ROW_COUNT = 500
-	X_trn = load_sparse_csr('X_trn_tfidf.npz')[:ROW_COUNT,:]
-	X_val = load_sparse_csr('X_val_tfidf.npz')[:ROW_COUNT,:]
-	X_all = load_sparse_csr('X_all_tfidf.npz')[:ROW_COUNT,:]
-	X_tst = load_sparse_csr('X_tst_tfidf.npz')[:ROW_COUNT,:]
+	X_trn = load_sparse_csr('X_trn_tfidf.npz')
+	X_val = load_sparse_csr('X_val_tfidf.npz')
+	X_all = load_sparse_csr('X_all_tfidf.npz')
+	X_tst = load_sparse_csr('X_tst_tfidf.npz')
 #	X_all = load_sparse_csr('X_all_cheat_tfidf.npz')
 #	X_tst = load_sparse_csr('X_tst_cheat_tfidf.npz')
 
@@ -337,15 +339,15 @@ if __name__ == "__main__":
 #    Y_val = np.genfromtxt('extracted_features/Y_val.csv', delimiter=',', dtype=str, usecols=[1])
 #    # Y_all = np.genfromtxt('extracted_features/Y_all.csv', delimiter=',', dtype=str, usecols=[1])
 
-	Y_trn = pd.read_csv('Y_trn.csv', usecols=[1],nrows=ROW_COUNT).values.flatten()
-	Y_val = pd.read_csv('Y_val.csv', usecols=[1],nrows=ROW_COUNT).values.flatten()
-	Y_all = pd.read_csv('Y_all.csv', usecols=[1],nrows=ROW_COUNT).values.flatten()
+	Y_trn = pd.read_csv('Y_trn.csv', usecols=[1]).values.flatten()
+	Y_val = pd.read_csv('Y_val.csv', usecols=[1]).values.flatten()
+	Y_all = pd.read_csv('Y_all.csv', usecols=[1]).values.flatten()
 	
 	print "Done."
 
 	print "Training classifier..................",
 	sys.stdout.flush()
-	model = RandomForest(['c' for i in xrange(features_count)])
+	model = RandomForest(['c' for i in xrange(features_count)], k = 10, m = 10, min_node_size = 50)
    	# model = GridSearchCV(model, {'k':[2,10,20,30,50,100], 'm': [2,4,8,16], 'min_node_size' : [20, 50], 'metadata' : [['c' for i in xrange(features_count)]]}, cv = 10)
 
 	model.fit(X_trn, Y_trn)
@@ -354,6 +356,7 @@ if __name__ == "__main__":
 	print "Testing on validation data...........",
 	sys.stdout.flush()
 
-	accuracy = model.score(X_val, Y_val)	
+	accuracy = model.score(X_val, Y_val)
 	print "Done."
-	print "Total time %s" % total_time
+	print "Profiled total time %s" % total_time # Run time for a particular block that we wish to profile
+	print "Total run time %s" % (time.time() - start_time) # Total run time of the whole process
