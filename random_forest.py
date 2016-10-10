@@ -5,6 +5,8 @@ import collections
 
 import numpy as np
 from sklearn.grid_search import GridSearchCV
+from utils import load_sparse_csr
+import pandas as pd
 
 POSITIVE_VALUE = 1
 NEGATIVE_VALUE = 0
@@ -37,8 +39,10 @@ class Decision(object):
         return x[self.feature_index] >= self.threshold
 
     def split(self, data):
-        true = np.array([index for index, line in enumerate(data) if line[self.feature_index] >= self.threshold])
-        false = np.array([index for index, line in enumerate(data) if line[self.feature_index] < self.threshold])
+#        true = np.array([index for index, line in enumerate(data) if line[self.feature_index] >= self.threshold])
+        true = np.where(data[:,self.feature_index].A >= self.threshold)[0]
+        false = np.where(data[:,self.feature_index].A < self.threshold)[0]
+#		false = np.array([index for index, line in enumerate(data) if line[self.feature_index] < self.threshold])
 
         return true, false
 
@@ -73,11 +77,15 @@ class TreeNode(object):
     def split(self, decision):
         true, false = decision.split(self.X)
 
-        true_X = np.array(map(lambda index : self.X[index], true))
-        true_y = list(map(lambda index : self.y[index], true))
+        true_X = self.X[true]
+        true_y = self.y[true.flatten()]
+#        true_X = np.array(map(lambda index : self.X[index], true))
+#        true_y = list(map(lambda index : self.y[index], true))
 
-        false_X = np.array(map(lambda index : self.X[index], false))
-        false_y = list(map(lambda index : self.y[index], false))
+        false_X = self.X[false]
+        false_y = self.y[false.flatten()]
+#        false_X = np.array(map(lambda index : self.X[index], false))
+#        false_y = list(map(lambda index : self.y[index], false))
 
         self.decision = decision
         self.true = TreeNode(true_X, true_y)
@@ -106,7 +114,7 @@ class TreeNode(object):
 
 class RandomForest(object):
     """Implementation of random forest model"""
-    def __init__(self, metadata = None, k = 2, m = 5):
+    def __init__(self, metadata = None, k = 20, m = 50):
         super(RandomForest, self).__init__()
         self.k = k
         self.m = m
@@ -130,8 +138,8 @@ class RandomForest(object):
         if feature_type == 'b':
             return Decision(feature_index, MID_VALUE)
         else:
-            min_value = min(data[:,feature_index])
-            max_value = max(data[:,feature_index])
+            min_value = np.min(data[:,feature_index])
+            max_value = np.max(data[:,feature_index])
 
             return Decision(feature_index, random.uniform(min_value, max_value))
 
@@ -152,6 +160,7 @@ class RandomForest(object):
 
                 # Pick the leaf node from the stack
                 leaf_node = non_zero_leaf_nodes[tree_index].pop()
+                current_entropy = leaf_node.entropy_root()
 
                 min_entropy = 9999999
                 min_decision = None
@@ -170,6 +179,9 @@ class RandomForest(object):
                         break
 
                 assert min_decision is not None
+                if min_entropy >= current_entropy:
+                    print "Warning: Entropy not decreasing"
+                    continue
                 leaf_node.split(min_decision) # Assign the chosen decision to this node
 
                 # Then delete data from the node to save memory (since data is already saved in the node's children)
@@ -198,11 +210,12 @@ class RandomForest(object):
         return results.most_common()[0][0]
 
     def predict(self, X):
-        return [self.predict_single(x) for x in X]
+        return [self.predict_single(x.A.flatten()) for x in X]
 
     def score(self, X, y):
         prediction = self.predict(X)
-        accurate_count = sum(1 for index, value in enumerate(prediction) if value == y[index])
+        accurate_count = np.sum(prediction == y)
+#        accurate_count = sum(1 for index, value in enumerate(prediction) if value == y[index])
 
         accuracy = float(accurate_count) / len(y)
         print "Accuracy: {0}".format(accuracy)
@@ -232,28 +245,45 @@ if __name__ == "__main__":
     print "Reading files........................",
     sys.stdout.flush()
 
-    X_trn = np.genfromtxt('extracted_features/X_trn.csv', delimiter=',', dtype=int)
-    X_val = np.genfromtxt('extracted_features/X_val.csv', delimiter=',', dtype=int)
-    # X_all = np.genfromtxt('extracted_features/X_all.csv', delimiter=',', dtype=int)
-    X_tst = np.genfromtxt('extracted_features/X_tst.csv', delimiter=',', dtype=int)
+#    X_trn = np.genfromtxt('extracted_features/X_trn.csv', delimiter=',', dtype=int)
+#    X_val = np.genfromtxt('extracted_features/X_val.csv', delimiter=',', dtype=int)
+#    # X_all = np.genfromtxt('extracted_features/X_all.csv', delimiter=',', dtype=int)
+#    X_tst = np.genfromtxt('extracted_features/X_tst.csv', delimiter=',', dtype=int)
 
-    ids_trn, X_trn = X_trn[:,0][:,None], X_trn[:,1:]
-    ids_val, X_val = X_val[:,0][:,None], X_val[:,1:]
-    # ids_all, X_all = X_all[:,0][:,None], X_all[:,1:]
-    ids_tst, X_tst = X_tst[:,0][:,None], X_tst[:,1:]
+	
+    X_trn = load_sparse_csr('X_trn_tfidf.npz')[:500,:]
+    X_val = load_sparse_csr('X_val_tfidf.npz')[:500,:]
+    X_all = load_sparse_csr('X_all_tfidf.npz')[:500,:]
+    X_tst = load_sparse_csr('X_tst_tfidf.npz')[:500,:]
+#	X_all = load_sparse_csr('X_all_cheat_tfidf.npz')
+#	X_tst = load_sparse_csr('X_tst_cheat_tfidf.npz')
+
+    ids_trn, X_trn = X_trn[:,0].toarray().astype(int), X_trn[:,1:]
+    ids_val, X_val = X_val[:,0].toarray().astype(int), X_val[:,1:]
+    ids_all, X_all = X_all[:,0].toarray().astype(int), X_all[:,1:]
+    ids_tst, X_tst = X_tst[:,0].toarray().astype(int), X_tst[:,1:]
+
+#    ids_trn, X_trn = X_trn[:,0][:,None], X_trn[:,1:]
+#    ids_val, X_val = X_val[:,0][:,None], X_val[:,1:]
+#    # ids_all, X_all = X_all[:,0][:,None], X_all[:,1:]
+#    ids_tst, X_tst = X_tst[:,0][:,None], X_tst[:,1:]
 
     features_count = X_trn.shape[1]
+#
+#    Y_trn = np.genfromtxt('extracted_features/Y_trn.csv', delimiter=',', dtype=str, usecols=[1])
+#    Y_val = np.genfromtxt('extracted_features/Y_val.csv', delimiter=',', dtype=str, usecols=[1])
+#    # Y_all = np.genfromtxt('extracted_features/Y_all.csv', delimiter=',', dtype=str, usecols=[1])
 
-    Y_trn = np.genfromtxt('extracted_features/Y_trn.csv', delimiter=',', dtype=str, usecols=[1])
-    Y_val = np.genfromtxt('extracted_features/Y_val.csv', delimiter=',', dtype=str, usecols=[1])
-    # Y_all = np.genfromtxt('extracted_features/Y_all.csv', delimiter=',', dtype=str, usecols=[1])
-
+    Y_trn = pd.read_csv('Y_trn.csv', usecols=[1],nrows=500).values.flatten()
+    Y_val = pd.read_csv('Y_val.csv', usecols=[1],nrows=500).values.flatten()
+    Y_all = pd.read_csv('Y_all.csv', usecols=[1],nrows=500).values.flatten()
+	
     print "Done."
 
     print "Training classifier..................",
     sys.stdout.flush()
     model = RandomForest(['c' for i in xrange(features_count)])
-    model = GridSearchCV(model, {'k':[2,10,20,30,50,100], 'm': [2,4,8,16], 'metadata' : [['c' for i in xrange(features_count)]]}, cv = 10)
+#    model = GridSearchCV(model, {'k':[2,10,20,30,50,100], 'm': [2,4,8,16], 'metadata' : [['c' for i in xrange(features_count)]]}, cv = 10)
 
     model.fit(X_trn, Y_trn)
     print "Done."
