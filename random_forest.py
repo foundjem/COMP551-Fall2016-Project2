@@ -2,21 +2,22 @@ import sys
 import math
 import random
 import collections
-from multiprocessing import Process
+from multiprocessing import Process, Queue
+import time
 
 import numpy as np
 from sklearn.grid_search import GridSearchCV
 from utils import load_sparse_csr
 import pandas as pd
+from scipy import sparse
 
-
-def execute_in_parallel(lambda_list, timeout_seconds = None, max_worker = 8):
+def execute_in_parallel(lambda_list, args, timeout_seconds = None, max_worker = 8):
 	"""
-		Execute a list of functions in parallel. The functions must take no input.
+		Execute a list of functions in parallel.
 	"""
 	all_processes = []
-	for l in lambda_list:
-		p = Process(target=l)
+	for i, l in enumerate(lambda_list):
+		p = Process(target=l, args = (args[i], ))
 		all_processes.append(p)
 		p.start()
 
@@ -26,6 +27,8 @@ def execute_in_parallel(lambda_list, timeout_seconds = None, max_worker = 8):
 POSITIVE_VALUE = 1
 NEGATIVE_VALUE = 0
 MID_VALUE = 0.5
+
+total_time = 0
 
 log2 = lambda x : math.log(x, 2)
 
@@ -54,10 +57,12 @@ class Decision(object):
 		return x[self.feature_index] >= self.threshold
 
 	def split(self, data):
-#        true = np.array([index for index, line in enumerate(data) if line[self.feature_index] >= self.threshold])
-		true = np.where(data[:,self.feature_index].A >= self.threshold)[0]
-		false = np.where(data[:,self.feature_index].A < self.threshold)[0]
-#		false = np.array([index for index, line in enumerate(data) if line[self.feature_index] < self.threshold])
+		# true = np.where(data[:,self.feature_index].A >= self.threshold)[0]
+		# false = np.where(data[:,self.feature_index].A < self.threshold)[0]
+
+		bool_vec = data[:,self.feature_index].A >= self.threshold
+		true = np.where(bool_vec)[0]
+		false = np.where(np.logical_not(bool_vec))[0]
 
 		return true, false
 
@@ -90,21 +95,30 @@ class TreeNode(object):
 			return random.choice([NEGATIVE_VALUE,POSITIVE_VALUE])
 
 	def split(self, decision):
+		s = time.time()
 		true, false = decision.split(self.X)
+		global total_time
+		total_time += time.time() - s
 
+		s = time.time()
 		true_X = self.X[true]
+		total_time += time.time() - s
 		true_y = self.y[true.flatten()]
 #        true_X = np.array(map(lambda index : self.X[index], true))
 #        true_y = list(map(lambda index : self.y[index], true))
 
+		s = time.time()
 		false_X = self.X[false]
+		total_time += time.time() - s
 		false_y = self.y[false.flatten()]
+
 #        false_X = np.array(map(lambda index : self.X[index], false))
 #        false_y = list(map(lambda index : self.y[index], false))
-
+		
 		self.decision = decision
 		self.true = TreeNode(true_X, true_y)
 		self.false = TreeNode(false_X, false_y)
+		
 
 	def entropy_root(self):
 		"""
@@ -114,7 +128,7 @@ class TreeNode(object):
 			return 0
 
 		counter = collections.Counter(self.y)
-		return entropy(map(lambda x : x[1], counter.items()), self.size())
+		return entropy([x[1] for x in counter.items()], self.size())
 
 	def entropy_children(self):
 		"""
@@ -145,16 +159,19 @@ def max_sparse(X):
 
 class RandomForest(object):
 	"""Implementation of random forest model"""
-	def __init__(self, metadata = None, k = 30, m = 5):
+	def __init__(self, metadata = None, k = 3, m = 10, min_node_size = 20):
 		super(RandomForest, self).__init__()
 		self.k = k
 		self.m = m
+
+		# Minimum size of a node. Stop adding decision if the node size is below this size
+		self.min_node_size = min_node_size
 
 		# Metadata contains the information about each input feature: either 'b' for boolean or 'c' for continuous
 		self.metadata = metadata
 
 	def get_params(self, deep=True):
-		return {'k' : self.k, 'm' : self.m}
+		return { 'k' : self.k, 'm' : self.m }
 
 	def set_params(self, **parameters):
 		for parameter, value in parameters.items():
@@ -177,65 +194,68 @@ class RandomForest(object):
 	def fit(self, X, y):
 		assert len(self.metadata) == X.shape[1]
 
-		self.root_nodes = [TreeNode(X, y) for _ in xrange(self.k)]
-		non_zero_leaf_nodes = [[node] for node in self.root_nodes] # List of stacks of nodes to consider
+		self.root_nodes = []
+		# non_zero_leaf_nodes = [[node] for node in self.root_nodes] # List of stacks of nodes to consider
 
-		to_dos = []
+		def job(root_node):
+			def inner():
+				non_zero_leaf_nodes = [root_node]
+
+				while len(non_zero_leaf_nodes) > 0:
+					# Pick m features randomly
+					selected_features = random.sample(xrange(X.shape[1]), self.m)
+
+					# Pick the leaf node from the stack
+					leaf_node = non_zero_leaf_nodes.pop()
+					if leaf_node.size() < self.min_node_size:
+						continue
+
+					current_entropy = leaf_node.entropy_root()
+
+
+					min_entropy = 9999999
+					min_decision = None
+
+					# From m features construct m tests and select the best one based on entropy
+					for feature_index in selected_features:
+						decision = self._build_decision(feature_index, leaf_node.X)
+						leaf_node.split(decision)
+
+						new_entropy = leaf_node.entropy_children()
+						
+						if new_entropy < min_entropy:
+							min_entropy = new_entropy
+							min_decision = decision
+
+						if new_entropy == 0: # This has to be the smallest
+							break
+
+					assert min_decision is not None
+					if min_entropy >= current_entropy:
+						# print "Warning: Entropy not decreasing"
+						continue
+					leaf_node.split(min_decision) # Assign the chosen decision to this node
+
+					# Then delete data from the node to save memory (since data is already saved in the node's children)
+					leaf_node.X = None
+					leaf_node.y = None
+
+					if leaf_node.true.entropy_root() > 0:
+						non_zero_leaf_nodes.append(leaf_node.true)
+
+					if leaf_node.false.entropy_root() > 0:
+						non_zero_leaf_nodes.append(leaf_node.false)
+
+				print "Done"
+			return inner
+
+		jobs = []
 		for tree_index in xrange(self.k):
+			new_root = TreeNode(X, y)
+			job(new_root)()
+			self.root_nodes.append(new_root)
 
-			def job(current_tree_index):
-				def inner():
-					print "index is %s" % current_tree_index
-					while len(non_zero_leaf_nodes[current_tree_index]) > 0:
-						# Pick m features randomly
-						selected_features = random.sample(xrange(X.shape[1]), self.m)
-
-						if len(non_zero_leaf_nodes[current_tree_index]) == 0:
-							continue
-
-						# Pick the leaf node from the stack
-						leaf_node = non_zero_leaf_nodes[current_tree_index].pop()
-						current_entropy = leaf_node.entropy_root()
-
-						min_entropy = 9999999
-						min_decision = None
-
-						# From m features construct m tests and select the best one based on entropy
-						for feature_index in selected_features:
-							decision = self._build_decision(feature_index, leaf_node.X)
-							leaf_node.split(decision)
-
-							new_entropy = leaf_node.entropy_children()
-							if new_entropy < min_entropy:
-								min_entropy = new_entropy
-								min_decision = decision
-
-							if new_entropy == 0: # This has to be the smallest
-								break
-
-						assert min_decision is not None
-						if min_entropy >= current_entropy:
-							print "Warning: Entropy not decreasing"
-							continue
-						leaf_node.split(min_decision) # Assign the chosen decision to this node
-
-						# Then delete data from the node to save memory (since data is already saved in the node's children)
-						leaf_node.X = None
-						leaf_node.y = None
-
-						if leaf_node.true.entropy_root() > 0:
-							non_zero_leaf_nodes[current_tree_index].append(leaf_node.true)
-
-						if leaf_node.false.entropy_root() > 0:
-							non_zero_leaf_nodes[current_tree_index].append(leaf_node.false)
-
-				return inner
-			job(tree_index)()
-		# 	to_dos.append(job(tree_index))
-		# execute_in_parallel(to_dos)
-
-
-
+		print "Done training"
 
 	def predict_single(self, x):
 		results = collections.Counter()
@@ -258,7 +278,7 @@ class RandomForest(object):
 	def score(self, X, y):
 		prediction = self.predict(X)
 		accurate_count = np.sum(prediction == y)
-#        accurate_count = sum(1 for index, value in enumerate(prediction) if value == y[index])
+       # accurate_count = sum(1 for index, value in enumerate(prediction) if value == y[index])
 
 		accuracy = float(accurate_count) / len(y)
 		print "Accuracy: {0}".format(accuracy)
@@ -326,12 +346,14 @@ if __name__ == "__main__":
 	print "Training classifier..................",
 	sys.stdout.flush()
 	model = RandomForest(['c' for i in xrange(features_count)])
-#    model = GridSearchCV(model, {'k':[2,10,20,30,50,100], 'm': [2,4,8,16], 'metadata' : [['c' for i in xrange(features_count)]]}, cv = 10)
+   	# model = GridSearchCV(model, {'k':[2,10,20,30,50,100], 'm': [2,4,8,16], 'min_node_size' : [20, 50], 'metadata' : [['c' for i in xrange(features_count)]]}, cv = 10)
 
 	model.fit(X_trn, Y_trn)
 	print "Done."
 
 	print "Testing on validation data...........",
 	sys.stdout.flush()
-	accuracy = model.score(X_val, Y_val)
+
+	accuracy = model.score(X_val, Y_val)	
 	print "Done."
+	print "Total time %s" % total_time
