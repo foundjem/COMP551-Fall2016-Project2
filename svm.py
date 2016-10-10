@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.grid_search import GridSearchCV
 from sklearn.cross_validation import cross_val_score
 from sklearn import svm
+from utils import load_sparse_csr, oversample
 
 if __name__ == '__main__':
 
@@ -11,20 +12,21 @@ if __name__ == '__main__':
 	############################################
 	print "Reading files........................",
 	sys.stdout.flush()
+	X_trn = load_sparse_csr('X_trn_tfidf.npz')
+	X_val = load_sparse_csr('X_val_tfidf.npz')
+#	X_all = load_sparse_csr('X_all_tfidf.npz')
+#	X_tst = load_sparse_csr('X_tst_tfidf.npz')
+	X_all = load_sparse_csr('X_all_cheat_tfidf.npz')
+	X_tst = load_sparse_csr('X_tst_cheat_tfidf.npz')
 
-	X_trn = np.genfromtxt('X_trn.csv', delimiter=',', dtype=int)
-	X_val = np.genfromtxt('X_val.csv', delimiter=',', dtype=int)
-	X_all = np.genfromtxt('X_all.csv', delimiter=',', dtype=int)
-	X_tst = np.genfromtxt('X_tst.csv', delimiter=',', dtype=int)
+	ids_trn, X_trn = X_trn[:,0].toarray().astype(int), X_trn[:,1:]
+	ids_val, X_val = X_val[:,0].toarray().astype(int), X_val[:,1:]
+	ids_all, X_all = X_all[:,0].toarray().astype(int), X_all[:,1:]
+	ids_tst, X_tst = X_tst[:,0].toarray().astype(int), X_tst[:,1:]
 
-	ids_trn, X_trn = X_trn[:,0][:,None], X_trn[:,1:]
-	ids_val, X_val = X_val[:,0][:,None], X_val[:,1:]
-	ids_all, X_all = X_all[:,0][:,None], X_all[:,1:]
-	ids_tst, X_tst = X_tst[:,0][:,None], X_tst[:,1:]
-
-	Y_trn = np.genfromtxt('Y_trn.csv', delimiter=',', dtype=str, usecols=[1])
-	Y_val = np.genfromtxt('Y_val.csv', delimiter=',', dtype=str, usecols=[1])
-	Y_all = np.genfromtxt('Y_all.csv', delimiter=',', dtype=str, usecols=[1])
+	Y_trn = pd.read_csv('Y_trn.csv', usecols=[1]).values.flatten()
+	Y_val = pd.read_csv('Y_val.csv', usecols=[1]).values.flatten()
+	Y_all = pd.read_csv('Y_all.csv', usecols=[1]).values.flatten()
 	print "Done."
 
 	print "Training classifier..................",
