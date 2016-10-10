@@ -90,3 +90,5 @@ ENV/
 
 # Data files are too large
 *.csv
+
+*.npz

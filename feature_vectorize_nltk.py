@@ -8,6 +8,21 @@ import nltk
 
 tf_idf = True
 
+
+def save_sparse_csr(file, mat):
+    np.savez(file, data=mat.data,
+				   indices=mat.indices,
+				   indptr=mat.indptr,
+				   shape=mat.shape)
+
+def load_sparse_csr(file):
+    loader = np.load(file)
+    return sparse.csr_matrix((loader['data'],
+							  loader['indices'],
+							  loader['indptr']),
+							  shape = loader['shape'])
+
+
 class stem_tokenizer(object):
 	def __init__(self, stemmer=nltk.stem.SnowballStemmer('english').stem):
 		self.tokenizer = re.compile(r"(?u)\b[a-zA-Z]{2,}\b").findall
@@ -54,6 +69,7 @@ if __name__ == '__main__':
 	doc_val = dat_all[v_split:,1]
 	doc_all = dat_all[:,1]
 	doc_tst = dat_tst[:,1]
+	doc_cht = np.hstack((doc_all, doc_tst))
 	
 	lab_trn = lab_all[:v_split,1]
 	lab_val = lab_all[v_split:,1]
@@ -74,44 +90,72 @@ if __name__ == '__main__':
 									max_features=200,
 									min_df=1)
 	print "Done."
+	
+	print "Building TF-IDF transformer..........",
+	sys.stdout.flush()
+	transformer = TfidfTransformer()
+	print "Done."
 
 	print "Extracting training features.........",
 	sys.stdout.flush()
-	X_trn = vectorizer.fit_transform(doc_trn)
-	X_trn = sparse.hstack((X_trn, ng_vectorizer.fit_transform(doc_trn)))
-	X_val = vectorizer.transform(doc_val)
-	X_val = sparse.hstack((X_val, ng_vectorizer.transform(doc_val)))
-	header_trn = ['id'] + vectorizer.get_feature_names() + ng_vectorizer.get_feature_names()
-	header_trn = ','.join(header_trn)
+	X_trn_counts = vectorizer.fit_transform(doc_trn)
+	X_trn_counts = sparse.hstack((X_trn_counts,
+								  ng_vectorizer.fit_transform(doc_trn)))
+								  
+	X_val_counts = vectorizer.transform(doc_val)
+	X_val_counts = sparse.hstack((X_val_counts,
+								  ng_vectorizer.transform(doc_val)))
+								  
+	header_trn = ['id']
+	header_trn.extend(vectorizer.get_feature_names())
+	header_trn.extend(ng_vectorizer.get_feature_names())
+	header_trn = np.array(header_trn)
 	print "Done."
 	
 	print "Extracting testing features..........",
 	sys.stdout.flush()
-	X_all = vectorizer.fit_transform(doc_all)
-	X_all = sparse.hstack((X_all, ng_vectorizer.fit_transform(doc_all)))
-	X_tst = vectorizer.transform(doc_tst)
-	X_tst = sparse.hstack((X_tst, ng_vectorizer.transform(doc_tst)))
-	header_all = ['id'] + vectorizer.get_feature_names() + ng_vectorizer.get_feature_names()
-	header_all = ','.join(header_all)
+	X_all_counts = vectorizer.fit_transform(doc_all)
+	X_all_counts = sparse.hstack((X_all_counts,
+								  ng_vectorizer.fit_transform(doc_all)))
+								  
+	X_tst_counts = vectorizer.transform(doc_tst)
+	X_tst_counts = sparse.hstack((X_tst_counts,
+								  ng_vectorizer.transform(doc_tst)))
+								  
+	header_all = ['id']
+	header_all.extend(vectorizer.get_feature_names())
+	header_all.extend(ng_vectorizer.get_feature_names())
+	header_all = np.array(header_all)
 	print "Done."
 	
-	if tf_idf:
-		print "Building TF-IDF transformer..........",
-		sys.stdout.flush()
-		transformer = TfidfTransformer()
-		print "Done."
-		
-		print "Applying TF-IDF transform............",
-		sys.stdout.flush()
-		X_trn = transformer.fit_transform(X_trn)
-		X_val = transformer.transform(X_val)
-		X_all = transformer.fit_transform(X_all)
-		X_tst = transformer.transform(X_tst)
-		print "Done."
+	print "Extracting cheat features............",
+	sys.stdout.flush()
+	vectorizer.fit(doc_cht)
+	ng_vectorizer.fit(doc_cht)
+	X_all_cheat_counts = vectorizer.transform(doc_all)
+	X_all_cheat_counts = sparse.hstack((X_all_cheat_counts,
+										ng_vectorizer.transform(doc_all)))
+										
+	X_tst_cheat_counts = vectorizer.transform(doc_tst)
+	X_tst_cheat_counts = sparse.hstack((X_tst_cheat_counts,
+										ng_vectorizer.transform(doc_tst)))
+	header_cheat = ['id']
+	header_cheat.extend(vectorizer.get_feature_names())
+	header_cheat.extend(ng_vectorizer.get_feature_names())
+	header_cheat = np.array(header_cheat)
+	print "Done."
 	
-#	print "Features:"
-#	for f in vectorizer.get_feature_names(): print "   "+f
-#	for f in ng_vectorizer.get_feature_names(): print "   "+f
+	print "Applying TF-IDF transform............",
+	sys.stdout.flush()
+	X_trn_tfidf = transformer.fit_transform(X_trn_counts)
+	X_val_tfidf = transformer.transform(X_val_counts)
+	
+	X_all_tfidf = transformer.fit_transform(X_all_counts)
+	X_tst_tfidf = transformer.transform(X_tst_counts)
+	
+	X_all_cheat_tfidf = transformer.fit_transform(X_all_cheat_counts)
+	X_tst_cheat_tfidf = transformer.transform(X_tst_cheat_counts)
+	print "Done."
 
 	# Preppend IDs
 	ids_trn = np.array(ids_trn).astype(int)[:,None]
@@ -119,10 +163,19 @@ if __name__ == '__main__':
 	ids_all = np.array(ids_all).astype(int)[:,None]
 	ids_tst = np.array(ids_tst).astype(int)[:,None]
 
-	X_trn =	sparse.hstack((ids_trn, X_trn))
-	X_val =	sparse.hstack((ids_val, X_val))
-	X_all =	sparse.hstack((ids_all, X_all))
-	X_tst =	sparse.hstack((ids_tst, X_tst))
+	X_trn_counts = sparse.hstack((ids_trn, X_trn_counts))
+	X_val_counts = sparse.hstack((ids_val, X_val_counts))
+	X_all_counts = sparse.hstack((ids_all, X_all_counts))
+	X_tst_counts = sparse.hstack((ids_tst, X_tst_counts))
+	X_all_cheat_counts = sparse.hstack((ids_all, X_all_cheat_counts))
+	X_tst_cheat_counts = sparse.hstack((ids_tst, X_tst_cheat_counts))
+
+	X_trn_tfidf = sparse.hstack((ids_trn, X_trn_tfidf))
+	X_val_tfidf = sparse.hstack((ids_val, X_val_tfidf))
+	X_all_tfidf = sparse.hstack((ids_all, X_all_tfidf))
+	X_tst_tfidf = sparse.hstack((ids_tst, X_tst_tfidf))
+	X_all_cheat_tfidf = sparse.hstack((ids_all, X_all_cheat_tfidf))
+	X_tst_cheat_tfidf = sparse.hstack((ids_tst, X_tst_cheat_tfidf))
 	
 	Y_trn = np.array(lab_trn)[:,None]
 	Y_val = np.array(lab_val)[:,None]
@@ -131,16 +184,32 @@ if __name__ == '__main__':
 	Y_trn =	np.hstack((ids_trn, Y_trn))
 	Y_val =	np.hstack((ids_val, Y_val))
 	Y_all =	np.hstack((ids_all, Y_all))
+	
+	header_mat = np.vstack((header_trn, header_all, header_cheat)).T
 
 	print "Writing to file......................",
 	sys.stdout.flush()
-	fmt = '%f' if tf_idf else '%d'
-	ext = '_tfidf.csv' if tf_idf else '.csv'
-	np.savetxt('X_trn'+ext, X_trn.toarray(), delimiter=',', fmt=fmt, header=header_trn)
-	np.savetxt('X_val'+ext, X_val.toarray(), delimiter=',', fmt=fmt, header=header_trn)
-	np.savetxt('X_all'+ext, X_all.toarray(), delimiter=',', fmt=fmt, header=header_all)
-	np.savetxt('X_tst'+ext, X_tst.toarray(), delimiter=',', fmt=fmt, header=header_all)
-	
+#	fmt = '%f' if tf_idf else '%d'
+#	ext = '_tfidf' if tf_idf else '_counts'
+	save_sparse_csr('X_trn_counts', sparse.csr_matrix(X_trn_counts))
+	save_sparse_csr('X_val_counts', sparse.csr_matrix(X_val_counts))
+	save_sparse_csr('X_all_counts', sparse.csr_matrix(X_all_counts))
+	save_sparse_csr('X_tst_counts', sparse.csr_matrix(X_tst_counts))
+	save_sparse_csr('X_all_cheat_counts', sparse.csr_matrix(X_all_cheat_counts))
+	save_sparse_csr('X_tst_cheat_counts', sparse.csr_matrix(X_tst_cheat_counts))
+	save_sparse_csr('X_trn_tfidf', sparse.csr_matrix(X_trn_tfidf))
+	save_sparse_csr('X_val_tfidf', sparse.csr_matrix(X_val_tfidf))
+	save_sparse_csr('X_all_tfidf', sparse.csr_matrix(X_all_tfidf))
+	save_sparse_csr('X_tst_tfidf', sparse.csr_matrix(X_tst_tfidf))
+	save_sparse_csr('X_all_cheat_tfidf', sparse.csr_matrix(X_all_cheat_tfidf))
+	save_sparse_csr('X_tst_cheat_tfidf', sparse.csr_matrix(X_tst_cheat_tfidf))
+#	np.savetxt('X_trn'+ext, X_trn.toarray(), delimiter=',', fmt=fmt, header=header_trn)
+#	np.savetxt('X_val'+ext, X_val.toarray(), delimiter=',', fmt=fmt, header=header_trn)
+#	np.savetxt('X_all'+ext, X_all.toarray(), delimiter=',', fmt=fmt, header=header_all)
+#	np.savetxt('X_tst'+ext, X_tst.toarray(), delimiter=',', fmt=fmt, header=header_all)
+	np.savetxt('features.csv', header_mat, delimiter=',', fmt='%s',
+			   header='training,testing,cheat')
+
 	np.savetxt('Y_trn.csv', Y_trn, delimiter=',', fmt='%s', header='id,category')
 	np.savetxt('Y_val.csv', Y_val, delimiter=',', fmt='%s', header='id,category')
 	np.savetxt('Y_all.csv', Y_all, delimiter=',', fmt='%s', header='id,category')
