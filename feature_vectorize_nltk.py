@@ -9,6 +9,7 @@ import nltk
 tf_idf = True
 
 
+
 def save_sparse_csr(file, mat):
     np.savez(file, data=mat.data,
 				   indices=mat.indices,
@@ -81,13 +82,13 @@ if __name__ == '__main__':
 	vectorizer = CountVectorizer(tokenizer=lemma_tokenizer(),
 								 stop_words='english',
 								 lowercase=True,
-								 max_features=2000,
+								 max_features=50000,
 								 min_df=1)
 	ng_vectorizer = CountVectorizer(tokenizer=lemma_tokenizer(),
 									ngram_range=(2,3),
 									stop_words='english',
 									lowercase=True,
-									max_features=200,
+									max_features=5000,
 									min_df=1)
 	print "Done."
 	

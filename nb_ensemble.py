@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pandas as pd
 from sklearn.cross_validation import cross_val_score
@@ -41,6 +42,16 @@ if __name__ == '__main__':
 								 bootstrap = True,
 								 n_jobs=4)
 	print "Done."
+	
+	print "Training classifier..................",
+	sys.stdout.flush()
+	ensemble.fit(X_trn, Y_trn)
+	print "Done."
+
+	print "Testing on validation data...........",
+	sys.stdout.flush()
+	accuracy = ensemble.score(X_val, Y_val)
+	print "Done."
 								 
 	print "Training on all data.................",
 	sys.stdout.flush()
@@ -48,6 +59,7 @@ if __name__ == '__main__':
 	ensemble.fit(X_all, Y_all)
 	print "Done."
 	print "Ensemble of %d bagged classifiers:" % n_estimators
+	print "   Validation set accuracy:  %f" % accuracy
 	print "   Cross-validated accuracy: %f" % np.mean(scores)
 	
 	
