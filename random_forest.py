@@ -4,6 +4,8 @@ import random
 import collections
 from multiprocessing import Process, Queue
 import time
+import uuid
+import argparse
 
 import numpy as np
 from sklearn.grid_search import GridSearchCV
@@ -114,11 +116,11 @@ class TreeNode(object):
 
 #        false_X = np.array(map(lambda index : self.X[index], false))
 #        false_y = list(map(lambda index : self.y[index], false))
-		
+
 		self.decision = decision
 		self.true = TreeNode(true_X, true_y)
 		self.false = TreeNode(false_X, false_y)
-		
+
 
 	def entropy_root(self):
 		"""
@@ -144,18 +146,18 @@ class TreeNode(object):
 def min_sparse(X):
 	# return np.min(X)
 
-    if len(X.data) == 0:
-        return 0
-    m = X.data.min()
-    return m if X.getnnz() == X.size else min(m, 0)
+	if len(X.data) == 0:
+		return 0
+	m = X.data.min()
+	return m if X.getnnz() == X.size else min(m, 0)
 
 def max_sparse(X):
 	# return np.max(X)
 
-    if len(X.data) == 0:
-        return 0
-    m = X.data.max()
-    return m if X.getnnz() == X.size else max(m, 0)
+	if len(X.data) == 0:
+		return 0
+	m = X.data.max()
+	return m if X.getnnz() == X.size else max(m, 0)
 
 class RandomForest(object):
 	"""Implementation of random forest model"""
@@ -223,7 +225,7 @@ class RandomForest(object):
 						leaf_node.split(decision)
 
 						new_entropy = leaf_node.entropy_children()
-						
+
 						if new_entropy < min_entropy:
 							min_entropy = new_entropy
 							min_decision = decision
@@ -279,7 +281,7 @@ class RandomForest(object):
 	def score(self, X, y):
 		prediction = self.predict(X)
 		accurate_count = np.sum(prediction == y)
-       # accurate_count = sum(1 for index, value in enumerate(prediction) if value == y[index])
+	   # accurate_count = sum(1 for index, value in enumerate(prediction) if value == y[index])
 
 		accuracy = float(accurate_count) / len(y)
 		print "Accuracy: {0}".format(accuracy)
@@ -287,21 +289,14 @@ class RandomForest(object):
 
 
 if __name__ == "__main__":
-	# rf = RandomForest(1, 2, ['b', 'c', 'b'])
+	parser = argparse.ArgumentParser(description = 'Random forest')
+	parser.add_argument('-t', '--test', dest = 'test', default = False, action='store_true', help = 'Perform prediction on test set and save result.')
+	parser.add_argument('-k', dest = 'k', default = 10, help = 'Value of k. Default to 10.', type = int)
+	parser.add_argument('-m', dest = 'm', default = 10, help = 'Value of m. Default to 10.', type = int)
+	parser.add_argument('-s', dest = 'min_node_size', default = 20, help = 'Value of minimum size of a node in the trained tree. Default to 20.', type = int)
+	parser.add_argument('-l', dest = 'limit', default = False, action='store_true', help = 'Limiting the number of samples to train and validate on. Default to False (no limit).')
+	args = parser.parse_args()
 
-	# X = np.array([
-	#                 [NEGATIVE_VALUE, 7, NEGATIVE_VALUE],
-	#                 [NEGATIVE_VALUE, 6, POSITIVE_VALUE],
-	#                 [POSITIVE_VALUE, 4, NEGATIVE_VALUE],
-	#                 [NEGATIVE_VALUE, 5, POSITIVE_VALUE],
-	#                 [POSITIVE_VALUE, 3, POSITIVE_VALUE],
-	#                 [NEGATIVE_VALUE, 9, NEGATIVE_VALUE],
-	#                 [NEGATIVE_VALUE, 12, NEGATIVE_VALUE],
-	#                 [POSITIVE_VALUE, 14, POSITIVE_VALUE]
-	#                 ])
-	# y = [3, NEGATIVE_VALUE, POSITIVE_VALUE, 4, POSITIVE_VALUE, NEGATIVE_VALUE, POSITIVE_VALUE, NEGATIVE_VALUE]
-	# rf.fit(X, y)
-	# rf.score(X, y)
 
 	start_time = time.time()
 	############################################
@@ -322,6 +317,11 @@ if __name__ == "__main__":
 	X_tst = load_sparse_csr('X_tst_tfidf.npz')
 #	X_all = load_sparse_csr('X_all_cheat_tfidf.npz')
 #	X_tst = load_sparse_csr('X_tst_cheat_tfidf.npz')
+	if args.limit:
+		X_trn = X_trn[ : ROW_COUNT, ]
+		X_val = X_val[ : ROW_COUNT, ]
+		X_all = X_all[ : ROW_COUNT, ]
+		X_tst = X_tst[ : ROW_COUNT, ]
 
 	ids_trn, X_trn = X_trn[:,0].toarray().astype(int), X_trn[:,1:]
 	ids_val, X_val = X_val[:,0].toarray().astype(int), X_val[:,1:]
@@ -339,16 +339,16 @@ if __name__ == "__main__":
 #    Y_val = np.genfromtxt('extracted_features/Y_val.csv', delimiter=',', dtype=str, usecols=[1])
 #    # Y_all = np.genfromtxt('extracted_features/Y_all.csv', delimiter=',', dtype=str, usecols=[1])
 
-	Y_trn = pd.read_csv('Y_trn.csv', usecols=[1]).values.flatten()
-	Y_val = pd.read_csv('Y_val.csv', usecols=[1]).values.flatten()
-	Y_all = pd.read_csv('Y_all.csv', usecols=[1]).values.flatten()
-	
+	Y_trn = pd.read_csv('Y_trn.csv', usecols=[1], nrows = ROW_COUNT if args.limit else None).values.flatten()
+	Y_val = pd.read_csv('Y_val.csv', usecols=[1], nrows = ROW_COUNT if args.limit else None).values.flatten()
+	Y_all = pd.read_csv('Y_all.csv', usecols=[1], nrows = ROW_COUNT if args.limit else None).values.flatten()
+
 	print "Done."
 
 	print "Training classifier..................",
 	sys.stdout.flush()
-	model = RandomForest(['c' for i in xrange(features_count)], k = 10, m = 10, min_node_size = 50)
-   	# model = GridSearchCV(model, {'k':[2,10,20,30,50,100], 'm': [2,4,8,16], 'min_node_size' : [20, 50], 'metadata' : [['c' for i in xrange(features_count)]]}, cv = 10)
+	model = RandomForest(['c' for i in xrange(features_count)], k = args.k, m = args.m, min_node_size = args.min_node_size)
+	# model = GridSearchCV(model, {'k':[2,10,20,30,50,100], 'm': [2,4,8,16], 'min_node_size' : [20, 50], 'metadata' : [['c' for i in xrange(features_count)]]}, cv = 10)
 
 	model.fit(X_trn, Y_trn)
 	print "Done."
@@ -360,3 +360,12 @@ if __name__ == "__main__":
 	print "Done."
 	print "Profiled total time %s" % total_time # Run time for a particular block that we wish to profile
 	print "Total run time %s" % (time.time() - start_time) # Total run time of the whole process
+
+	if args.test:
+		print "Predicting on test data.................",
+		sys.stdout.flush()
+		test_prediction = model.predict(X_tst)
+		new_id = uuid.uuid4().hex
+		with open('out_random_forest_%s.csv' % new_id, 'w') as f:
+			np.savetxt(f, np.c_[ids_tst.flatten(), test_prediction], delimiter=',', fmt='%s')
+		print "Saved test prediction to out_random_forest_%s.csv" % new_id
