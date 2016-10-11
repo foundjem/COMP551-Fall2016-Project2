@@ -5,6 +5,7 @@ from sklearn.cross_validation import cross_val_score
 from sklearn.ensemble import BaggingClassifier
 from naive_bayes import multinomial_nb
 from utils import load_sparse_csr
+from scipy import sparse
 
 
 if __name__ == '__main__':
@@ -61,6 +62,31 @@ if __name__ == '__main__':
 	print "Ensemble of %d bagged classifiers:" % n_estimators
 	print "   Validation set accuracy:  %f" % accuracy
 	print "   Cross-validated accuracy: %f" % np.mean(scores)
+
+	############################################
+	######### Semi-supervised learning #########
+	############################################
+	print "Semi-supervised learning.............",
+	sys.stdout.flush()
+	X_working = X_tst
+	thresh = 0.9
+	iters, nb_added = 0, 0
+	while True:
+		ensemble.fit(X_all, Y_all)
+		Y_probs = np.max(ensemble.predict_proba(X_working), axis=1)
+		Y_working = ensemble.predict(X_working)
+		good_idx = np.where(Y_probs >= thresh)[0]
+		bad_idx = np.where(Y_probs < thresh)[0]
+		if not good_idx.size: break
+		iters = iters + 1
+		nb_added = nb_added + good_idx.size
+		X_all = sparse.vstack((X_all, X_working[good_idx,:]))
+		Y_all = np.hstack((Y_all, Y_working[good_idx]))
+		X_working = X_working[bad_idx,:]
+	print "Done."
+	print "Semi-supervised Learning:"
+	print "   %d iterations" % iters
+	print "   %d examples added to training corpus" % nb_added
 	
 	
 	############################################
