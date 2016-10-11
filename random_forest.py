@@ -199,6 +199,7 @@ class RandomForest(object):
 
 		self.root_nodes = []
 		# non_zero_leaf_nodes = [[node] for node in self.root_nodes] # List of stacks of nodes to consider
+		self.tree_count = 0
 
 		def job(root_node):
 			def inner():
@@ -249,7 +250,9 @@ class RandomForest(object):
 					if leaf_node.false.entropy_root() > 0:
 						non_zero_leaf_nodes.append(leaf_node.false)
 
-				print "Done"
+				self.tree_count += 1
+				print "\r==> Done %s" % self.tree_count
+				sys.stdout.flush()
 			return inner
 
 		jobs = []
@@ -290,11 +293,14 @@ class RandomForest(object):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description = 'Random forest')
-	parser.add_argument('-t', '--test', dest = 'test', default = False, action='store_true', help = 'Perform prediction on test set and save result.')
+
+	parser.add_argument('-f', '--feature-directory', dest = 'feature_directory', default = '55000', help = 'Select custom feature directory. Default to 55000.')
 	parser.add_argument('-k', dest = 'k', default = 10, help = 'Value of k. Default to 10.', type = int)
+	parser.add_argument('-l', '--limit', dest = 'limit', default = False, action='store_true', help = 'Limiting the number of samples to train and validate on. Default to False (no limit).')
 	parser.add_argument('-m', dest = 'm', default = 10, help = 'Value of m. Default to 10.', type = int)
-	parser.add_argument('-s', dest = 'min_node_size', default = 20, help = 'Value of minimum size of a node in the trained tree. Default to 20.', type = int)
-	parser.add_argument('-l', dest = 'limit', default = False, action='store_true', help = 'Limiting the number of samples to train and validate on. Default to False (no limit).')
+	parser.add_argument('-s', '--min-node-size', dest = 'min_node_size', default = 20, help = 'Value of minimum size of a node in the trained tree. Default to 20.', type = int)
+	parser.add_argument('-t', '--test', dest = 'test', default = False, action='store_true', help = 'Perform prediction on test set and save result.')
+	parser.add_argument('-v', '--no-validation', dest = 'validation', default = True, action='store_false', help = 'Skip training on train set and validation.')
 	args = parser.parse_args()
 
 
@@ -310,11 +316,11 @@ if __name__ == "__main__":
 #    # X_all = np.genfromtxt('extracted_features/X_all.csv', delimiter=',', dtype=int)
 #    X_tst = np.genfromtxt('extracted_features/X_tst.csv', delimiter=',', dtype=int)
 
-	ROW_COUNT = 500
-	X_trn = load_sparse_csr('X_trn_tfidf.npz')
-	X_val = load_sparse_csr('X_val_tfidf.npz')
-	X_all = load_sparse_csr('X_all_tfidf.npz')
-	X_tst = load_sparse_csr('X_tst_tfidf.npz')
+	ROW_COUNT = 600
+	X_trn = load_sparse_csr('{0}/X_trn_tfidf.npz'.format(args.feature_directory))
+	X_val = load_sparse_csr('{0}/X_val_tfidf.npz'.format(args.feature_directory))
+	X_all = load_sparse_csr('{0}/X_all_tfidf.npz'.format(args.feature_directory))
+	X_tst = load_sparse_csr('{0}/X_tst_tfidf.npz'.format(args.feature_directory))
 #	X_all = load_sparse_csr('X_all_cheat_tfidf.npz')
 #	X_tst = load_sparse_csr('X_tst_cheat_tfidf.npz')
 	if args.limit:
@@ -345,23 +351,28 @@ if __name__ == "__main__":
 
 	print "Done."
 
-	print "Training classifier..................",
-	sys.stdout.flush()
 	model = RandomForest(['c' for i in xrange(features_count)], k = args.k, m = args.m, min_node_size = args.min_node_size)
 	# model = GridSearchCV(model, {'k':[2,10,20,30,50,100], 'm': [2,4,8,16], 'min_node_size' : [20, 50], 'metadata' : [['c' for i in xrange(features_count)]]}, cv = 10)
 
-	model.fit(X_trn, Y_trn)
-	print "Done."
+	if args.validation:
+		print "Training classifier.................."
+		model.fit(X_trn, Y_trn)
+		print "Done."
 
-	print "Testing on validation data...........",
-	sys.stdout.flush()
+		print "Testing on validation data...........",
+		sys.stdout.flush()
 
-	accuracy = model.score(X_val, Y_val)
-	print "Done."
-	print "Profiled total time %s" % total_time # Run time for a particular block that we wish to profile
-	print "Total run time %s" % (time.time() - start_time) # Total run time of the whole process
+		accuracy = model.score(X_val, Y_val)
+		print "Done."
+		print "Profiled total time %s" % total_time # Run time for a particular block that we wish to profile
+		print "Total run time %s" % (time.time() - start_time) # Total run time of the whole process
 
 	if args.test:
+		training_start = time.time()
+		print "Training on X_all......................."
+		model.fit(X_all, Y_all)
+		print "Done training on X_all. This training took {0}s".format(time.time() - training_start)
+
 		print "Predicting on test data.................",
 		sys.stdout.flush()
 		test_prediction = model.predict(X_tst)
