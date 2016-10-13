@@ -82,13 +82,13 @@ if __name__ == '__main__':
 	vectorizer = CountVectorizer(tokenizer=lemma_tokenizer(),
 								 stop_words='english',
 								 lowercase=True,
-								 max_features=50000,
+								 max_features=90000,
 								 min_df=1)
 	ng_vectorizer = CountVectorizer(tokenizer=lemma_tokenizer(),
 									ngram_range=(2,3),
 									stop_words='english',
 									lowercase=True,
-									max_features=5000,
+									max_features=10000,
 									min_df=1)
 	print "Done."
 	
@@ -186,7 +186,8 @@ if __name__ == '__main__':
 	Y_val =	np.hstack((ids_val, Y_val))
 	Y_all =	np.hstack((ids_all, Y_all))
 	
-	header_mat = np.vstack((header_trn, header_all, header_cheat)).T
+	
+#	header_mat = np.vstack((header_trn, header_all, header_cheat)).T
 
 	print "Writing to file......................",
 	sys.stdout.flush()
@@ -208,8 +209,8 @@ if __name__ == '__main__':
 #	np.savetxt('X_val'+ext, X_val.toarray(), delimiter=',', fmt=fmt, header=header_trn)
 #	np.savetxt('X_all'+ext, X_all.toarray(), delimiter=',', fmt=fmt, header=header_all)
 #	np.savetxt('X_tst'+ext, X_tst.toarray(), delimiter=',', fmt=fmt, header=header_all)
-	np.savetxt('features.csv', header_mat, delimiter=',', fmt='%s',
-			   header='training,testing,cheat')
+#	np.savetxt('features.csv', header_mat, delimiter=',', fmt='%s',
+#			   header='training,testing,cheat')
 
 	np.savetxt('Y_trn.csv', Y_trn, delimiter=',', fmt='%s', header='id,category')
 	np.savetxt('Y_val.csv', Y_val, delimiter=',', fmt='%s', header='id,category')
