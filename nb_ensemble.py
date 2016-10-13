@@ -38,30 +38,30 @@ if __name__ == '__main__':
 	print "Building ensemble....................",
 	sys.stdout.flush()
 	n_estimators = 100
-	ensemble = BaggingClassifier(multinomial_nb(alpha=0.0001),
-								 n_estimators=n_estimators,
-								 bootstrap = True,
-								 n_jobs=4)
+	bagged = BaggingClassifier(multinomial_nb(alpha=0.0001, oversample_data=False),
+							   n_estimators=n_estimators,
+							   bootstrap = True,
+							   n_jobs=-1)
 	print "Done."
 	
 	print "Training classifier..................",
 	sys.stdout.flush()
-	ensemble.fit(X_trn, Y_trn)
+	bagged.fit(X_trn, Y_trn)
 	print "Done."
 
 	print "Testing on validation data...........",
 	sys.stdout.flush()
-	accuracy = ensemble.score(X_val, Y_val)
+	bagged_accuracy = bagged.score(X_val, Y_val)
 	print "Done."
 								 
 	print "Training on all data.................",
 	sys.stdout.flush()
-	scores = cross_val_score(ensemble, X_all, Y_all, cv=10)
-	ensemble.fit(X_all, Y_all)
+	bagged_scores = cross_val_score(bagged, X_all, Y_all, cv=10)
+	bagged.fit(X_all, Y_all)
 	print "Done."
 	print "Ensemble of %d bagged classifiers:" % n_estimators
-	print "   Validation set accuracy:  %f" % accuracy
-	print "   Cross-validated accuracy: %f" % np.mean(scores)
+	print "   Validation set accuracy:  %f" % bagged_accuracy
+	print "   Cross-validated accuracy: %f" % np.mean(bagged_scores)
 
 	############################################
 	######### Semi-supervised learning #########
@@ -70,11 +70,15 @@ if __name__ == '__main__':
 	sys.stdout.flush()
 	X_working = X_tst
 	thresh = 0.9
+	top_n = 20
 	iters, nb_added = 0, 0
 	while True:
-		ensemble.fit(X_all, Y_all)
-		Y_probs = np.max(ensemble.predict_proba(X_working), axis=1)
-		Y_working = ensemble.predict(X_working)
+		bagged.fit(X_all, Y_all)
+		Y_probs = np.max(bagged.predict_proba(X_working), axis=1)
+		Y_working = bagged.predict(X_working)
+#		if Y_probs.size <= top_n or np.max(Y_probs) < thresh: break
+#		good_idx = np.argsort(Y_probs)[-top_n:]
+#		bad_idx = np.argsort(Y_probs)[:top_n]
 		good_idx = np.where(Y_probs >= thresh)[0]
 		bad_idx = np.where(Y_probs < thresh)[0]
 		if not good_idx.size: break
@@ -87,21 +91,21 @@ if __name__ == '__main__':
 	print "Semi-supervised Learning:"
 	print "   %d iterations" % iters
 	print "   %d examples added to training corpus" % nb_added
-	
+
 	
 	############################################
 	################ Prediction ################
 	############################################
 	print "Predicting labels for unseen data....",
 	sys.stdout.flush()
-	Y_tst = ensemble.predict(X_tst)
+	bagged_Y_tst = bagged.predict(X_tst)
 	print "Done."
 	
 	print "Writing to file......................",
 	sys.stdout.flush()
-	Y_tst = np.hstack((ids_tst, Y_tst[:,None]))
-	Y_tst = np.vstack((['id','category'], Y_tst))
-	np.savetxt('Y_tst_ENSEMBLE.csv', Y_tst, delimiter=',', fmt='%s')
+	bagged_Y_tst = np.hstack((ids_tst, bagged_Y_tst[:,None]))
+	bagged_Y_tst = np.vstack((['id','category'], bagged_Y_tst))
+	np.savetxt('Y_tst_BAGGED.csv', bagged_Y_tst, delimiter=',', fmt='%s')
 	print "Done.\a"
 
 
