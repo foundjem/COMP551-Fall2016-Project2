@@ -4,6 +4,7 @@ from sklearn.grid_search import GridSearchCV
 from sklearn.cross_validation import cross_val_score
 from sklearn import svm
 from utils import load_sparse_csr, oversample
+import pandas as pd
 
 if __name__ == '__main__':
 

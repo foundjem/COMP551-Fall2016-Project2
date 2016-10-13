@@ -29,5 +29,8 @@ def oversample(X,y):
 	y = uniques.repeat(nb_samples)
 	
 	# Shuffle
+	return shuffle_together(X,y)
+
+def shuffle_together(X,y):
 	p = np.random.permutation(y.shape[0])
-	return (X[p,:],y[p])
+	return X[p,:], y[p]
