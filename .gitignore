@@ -100,3 +100,5 @@ ENV/
 Writeup/Writeup-blx.bib
 
 Writeup/Writeup.bbl
+
+*.xml

@@ -47,11 +47,11 @@
 % Problem Representation
 %========================
 \section{Problem Representation}
-	We chose to represent the text data as vectors of TF-IDF scores. We initially implemented our own code to calculate these feature vectors, but eventually turned to the Scikit-learn library \cite{sklearn} to produce them for us, to speed up the calculation time.
+	We chose to represent the text data as vectors of TF-IDF scores. We initially implemented our own code to calculate these feature vectors, but eventually turned to the Scikit-learn \cite{sklearn} \texttt{CountVectorizer} and \texttt{TfidfTransformer} functions to produce them for us, to speed up the calculation time.
 	
 	At the outset, we had planned on using the 2,000 most common unigrams and the 200 most common bigrams as features, but this proved to be ineffective. We improved our classification accuracy (at the cost of feature preprocessing time) by increasing to 90,000 unigram and 10,000 bigram TF-IDF scores, for a total of 100K features. Along the way we tried 22K and 55K features (both with a 10/1 unigram-bigram ratio), and found that the performance of our models just continued to increase as we added more features, so we settled on a nice even 100K, as that's just about how many unique terms exist in the training corpus.
 	
-	Our performance was further improved by lemmatizing the input tokens using NLTK's WordNetLemmatizer \cite{nltk}. This prevented terms carrying the same information (e.g. "authenticate" and "authenticated") from being treated as two separate features. By tagging words by their part of speech before passing them to the lemmatizer, we were able to further improve our features (by reducing terms like "is", "are", and "am" to their common meaning of "be"). This process greatly increased the computation time, but was well worth it, as we only needed to calculate the feature vectors once.
+	Our performance was further improved by lemmatizing the input tokens using NLTK's \texttt{WordNetLemmatizer} \cite{nltk}. This prevented terms carrying the same information (e.g. "authenticate" and "authenticated") from being treated as two separate features. By tagging words by their part of speech before passing them to the lemmatizer, we were able to further improve our features (by reducing terms like "is", "are", and "am" to their common meaning of "be"). This process greatly increased the computation time, but was well worth it, as we only needed to calculate the feature vectors once.
 	
 	Another decision we made over the course of the project was from where to extract the features. Early on, we were very strict about not using the text in the test corpus to select features, as we did not want to inadvertently influence the training of the model with information from set-aside data. However, as we increased the number of features, the difference between the set of most common words in the training corpus and in the combined training and testing corpora became negligible. Eventually we decided to produce 4 datasets:
 	\begin{enumerate}
@@ -70,8 +70,13 @@
 %===============================
 \section{Algorithm Selection and Implementation}
 \subsection{Linear}
+	We decided to implement Na\"ive Bayes for our linear classifier. We suspected that assuming a multinomial distribution would produce the best results (as that is the distribution of a unigram bag-of-words model), but we implemented both Multinomial and Bernoulli Na\"ive Bayes, since they are very similar in terms of implementation. The multinomial version did, as expected, perform marginally better, and is the model we used to produce our final predictions.
 	
+	Our Na\"ive Bayes implementation went through an extensive evolutionary process, and the final product is extremely efficient. The first several iterations of the code used iterative methods to compute feature and class probabilities, and training took several minutes, sometimes as long as an hour. However, once we made the move to using sparse matrices, the computation time was cut down significantly. This also allowed us to expand our feature set from 22,000 to 100,000 features without worrying about running out of memory. 
+	
+	Our code was further optimized by vectorizing nearly all of the calculations. Early iterations of our implementation had us manually splitting the dataset by class and calculating probabilities individually for each feature and each class. This is an incredibly inefficient way to work. We optimized by converting our output vector of labels to a one-hot vector encoding using Scikit-learn's \texttt{LabelBinarizer} \cite{sklearn}. This allowed us to split the set using a simple matrix multiplication, and calculating feature and class probabilities was boiled down to a couple summations down the correct axes. Coupled with the use of sparse matrices, this reduced our training computation time from the order of hours to seconds.
 
+	In addition to these optimizations, we used additional techniques to boost our accuracy.
 \subsection{Nonlinear}
 \subsection{Optional}
 
@@ -87,12 +92,17 @@
 % Discussion
 %========================
 \section{Discussion}
+\subsection{Linear}
+	We are very happy with the results of the Na\"ive Bayes classifier. Not only were we able to achieve the top position on the Kaggle leaderboard, but we feel our code is very efficient - when comparing to other implementations (such as Scikit-learn's \texttt{MultinomialNB}
+\subsection{Nonlinear}
+\subsection{Optional}
 
 %========================
 % Statement of Contributions
 %========================
 \section{Statement of Contributions}
 \subsection{Christopher Glasz}
+I implemented the code for feature selection, as well as the linear model (Na\"ive Bayes) and the optional method (SVM). I also produced the code for semi-supervised learning, and the sections of the report related to this work.
 \subsection{Truong Hoai Phuoc}
  
 %========================
