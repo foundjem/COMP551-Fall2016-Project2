@@ -78,6 +78,8 @@
 
 	In addition to these optimizations, we used additional techniques to boost our accuracy.
 \subsection{Nonlinear}
+    \subsubsection{Implementation}
+
     Random forest was chosen as our non-linear model. Implementation of random forest adheres to the definition introduced in the lectures, with some changes for convenience in programming details. The implementation has the following hyper-parameters:
     \begin{itemize}
         \item Number of trees \texttt{k} in the forest.
@@ -93,6 +95,55 @@
     
     During the training process, we noticed that matrix splitting at each iteration was the bottleneck, occupying on average 50\% to 60\% of the training time. Numpy array implementation would have delivered much better performance, but since the feature matrix was encoded as compress sparse row matrix, slicing performance was greatly reduced.
 
+    \subsubsection{Choosing hyper-parameters}
+    
+        A grid search for hyper-parameters was used during the testing, each with cross validation with 5 folds. Due to the constraints in performance mentioned previously, we were only able to train the implemented forests with 55000 extracted features. Note that the runtime might not be accurate due to the use of swap memory during training (since default RAM was insufficient) and interference of other processes (e.g. browser, media player…)
+    
+        \begin{table}[]
+        \centering
+        \caption{Hyper-parameter grid search for random forest model using 55000 features.}
+        \label{my-label}
+        \begin{tabular}{|c|c|c|c|c|c|}
+        \hline
+        No & k & m & min\_node\_size & validation\_accuracy & runtime(s) \\
+        \hline
+        1 & 5 & 10 & 20 & 0.7568 & 2223 \\
+        \hline
+        2 & 10 & 10 & 20 & 0.8201 & 4560 \\
+        \hline
+        3 & 10 & 20 & 20 & 0.8335 & 15860 \\
+        \hline
+        4 & 10 & 30 & 20 & 0.8358 & 13865 \\
+        \hline
+        5 & 10 & 40 & 20 & 0.8382 & 10515 \\
+        \hline
+        6 & 20 & 10 & 20 & 0.8493 & 9863 \\
+        \hline
+        7 & 20 & 20 & 20 & 0.8120 & 34767 \\
+        \hline
+        8 & 20 & 30 & 20 & 0.8244 & 44201 \\
+        \hline
+        9 & 30 & 10 & 20 & 0.8639 & 29197 \\
+        \hline
+        10 & 40 & 20 & 20 & 0.8733 & 43002 \\
+        \hline
+        11 & 10 & 10 & 50 & 0.8093 & 3277 \\
+        \hline
+        12 & 20 & 20 & 50 & 0.8598 & 12579 \\
+        \hline
+        13 & 20 & 30 & 50 & 0.8575 & 20011 \\
+        \hline
+        14 & 30 & 20 & 50 & 0.8683 & 30230 \\
+        \hline
+        \end{tabular}
+        \end{table}
+    
+        The following observations were made from the table:
+        \begin{itemize}
+            \item It is noticeable that accuracy was increasing significantly as the number of trees increased. For example, No. 7 and No. 10 (improved ~6\% by doubling the number of trees). Increasing number of trees in the forest naturally increased overall runtime.
+            \item On the other hand, an increase in the number of features used at each iteration did not improve validation accuracy as much (e.g. No.4 and 5, No.12 and 13). Increasing number of features used at each iteration also naturally increased overall runtime.
+            \item Lastly, an increase in the minimum size of the node deteriorates the performance, at the cost of runtime. For example, No. 2 and No.11
+        \end{itemize}
 
 \subsection{Optional}
 
@@ -102,55 +153,8 @@
 \section{Testing and Validation}
 \subsection{Linear}
 \subsection{Nonlinear}
-    A grid search for hyper-parameters was used during the testing, each with cross validation with 5 folds. Due to the constraints in performance mentioned previously, we were only able to train the implemented forests with 55000 extracted features. Note that the runtime might not be accurate due to the use of swap memory during training (since default RAM was insufficient) and interference of other processes (e.g. browser, media player…)
     
-    \begin{table}[]
-    \centering
-    \caption{Hyper-parameter grid search for random forest model using 55000 features.}
-    \label{my-label}
-    \begin{tabular}{|c|c|c|c|c|c|}
-    \hline
-    No & k & m & min\_node\_size & validation\_accuracy & runtime(s) \\
-    \hline
-    1 & 5 & 10 & 20 & 0.7568 & 2223 \\
-    \hline
-    2 & 10 & 10 & 20 & 0.8201 & 4560 \\
-    \hline
-    3 & 10 & 20 & 20 & 0.8335 & 15860 \\
-    \hline
-    4 & 10 & 30 & 20 & 0.8358 & 13865 \\
-    \hline
-    5 & 10 & 40 & 20 & 0.8382 & 10515 \\
-    \hline
-    6 & 20 & 10 & 20 & 0.8493 & 9863 \\
-    \hline
-    7 & 20 & 20 & 20 & 0.8120 & 34767 \\
-    \hline
-    8 & 20 & 30 & 20 & 0.8244 & 44201 \\
-    \hline
-    9 & 30 & 10 & 20 & 0.8639 & 29197 \\
-    \hline
-    10 & 40 & 20 & 20 & 0.8733 & 43002 \\
-    \hline
-    11 & 10 & 10 & 50 & 0.8093 & 3277 \\
-    \hline
-    12 & 20 & 20 & 50 & 0.8598 & 12579 \\
-    \hline
-    13 & 20 & 30 & 50 & 0.8575 & 20011 \\
-    \hline
-    14 & 30 & 20 & 50 & 0.8683 & 30230 \\
-    \hline
-    \end{tabular}
-    \end{table}
-
-    From the table, the best validation accuracy achieved was \texttt{0.8733} with 40 trees, 10 features and 20 minimum node size. The following observations were made:
-    \begin{itemize}
-        \item It is noticeable that accuracy was increasing significantly as the number of trees increased. For example, No. 7 and No. 10 (improved ~6\% by doubling the number of trees). Increasing number of trees in the forest naturally increased overall runtime.
-        \item On the other hand, an increase in the number of features used at each iteration did not improve validation accuracy as much (e.g. No.4 and 5, No.12 and 13). Increasing number of features used at each iteration also naturally increased overall runtime.
-        \item Lastly, an increase in the minimum size of the node deteriorates the performance, at the cost of runtime. For example, No. 2 and No.11
-    \end{itemize}
-    
-    To compare our implementation with the reference implementation of scikit-learn, we also did several runs using the library on 55000 and 100000 generated features, since the runtime is much better compared to our implementation). The runtime was much better due to optimization of matrix slicing process. That said, we were not able to use the reference library to train for beyond 1000 trees due to memory limitation. The following table describes the grid search using the scikit-learn library. Value of m (number of features used at each iteration) was chosen to be square root of the number of features (by default from the library).
+    Our best validation accuracy achieved was \texttt{0.8733} with 40 trees, 10 features and 20 minimum node size. To compare our implementation with the reference implementation of scikit-learn, we also did several runs using the library on 55000 and 100000 generated features, since the runtime is much better compared to our implementation). The runtime was much better due to optimization of matrix slicing process. That said, we were not able to use the reference library to train for beyond 1000 trees due to memory limitation. The following table describes the grid search using the scikit-learn library. Value of m (number of features used at each iteration) was chosen to be square root of the number of features (by default from the library).
     
     \begin{table}[]
     \centering
@@ -168,7 +172,7 @@
     \hline
     4 & 1000 & 1 & 0.8869 & 100k features \\
     \hline
-    5 & 1000 & 1 & 0.8808 & 100k features, 10 folds cv \\
+    5 & 1000 & 1 & 0.8808 & 100k features, cv=10 \\
     \hline
     \end{tabular}
     \end{table}
@@ -186,9 +190,9 @@
 	We are very happy with the results of the Na\"ive Bayes classifier. Not only were we able to achieve the top position on the Kaggle leaderboard, but we feel our code is very efficient - when comparing to other implementations (such as Scikit-learn's \texttt{MultinomialNB})
 	
 \subsection{Nonlinear}
-    Although performing much better than the baseline classifier, random forest was not as effective as Na{\"\i}veve Bayes in this classification problems. Our best validation accuracy was 0.8869, which translated to 0.7833 accuracy on test set.
+    Although performing much better than the baseline classifier, random forest was not as effective as Na{\"\i}veve Bayes in this classification problems. Our best validation accuracy using our own implementation was \texttt{0.8733}, which translated to \texttt{0.7664} accuracy on the test set. Our best validation accuracy using reference library was \texttt{0.8869}, which translated to \texttt{0.7833} accuracy on the test set.
     
-    Although our implementation of random forest model was accurate (performing very nearly as well as the reference library), many implementation optimizations could have been applied. Among these possible optimization for our implementation, process based parallelism was most unfortunately not implemented due. As a result, the implemented model took a very long time to train compared to the reference library. This also limited our grid search size to relatively small because of time constraint. We were able to partially mitigate this and utilized more CPU cores by manually training the model with different parameters.
+    Although our implementation of random forest model was accurate (performing nearly as well as the reference library), many implementation optimizations could have been applied. Among these possible optimizations for our implementation, process based parallelism was most unfortunately not implemented due. As a result, the implemented model took a very long time to train compared to the reference library. This also limited our grid search size to relatively small because of time constraint. We were able to partially mitigate this and utilized more CPU cores by manually training the model with different parameters.
     
     Despite having time constraint from the implementation perspective, we believe that the bottleneck to random forest accuracy was either at feature selection stage or the model choice itself. Given that the reference library did not improve validation accuracy as much despite being trained with much larger number of trees and features (100000 features) compared to our implementation model. Exploring some other alternatives (such as Support Vector Machines with appropriate kernel) may have yielded a better accuracy for our nonlinear model.
 
@@ -199,7 +203,7 @@
 \section{Statement of Contributions}
 We hereby state that all the work presented in this report is that of the authors.
 \subsection{Christopher Glasz}
-I implemented the code for feature selection, as well as the linear model (Na\"ive Bayes) and the optional method (SVM). I also produced the code for semi-supervised learning, and the sections of the report related to this work.
+    I implemented the code for feature selection, as well as the linear model (Na\"ive Bayes) and the optional method (SVM). I also produced the code for semi-supervised learning, and the sections of the report related to this work.
 \subsection{Truong Hoai Phuoc}
     Hoai Phuoc Truong was responsible for the introduction of the report. He was also responsible for the implementation of nonlinear model and writing up nonlinear section of the report.
  
