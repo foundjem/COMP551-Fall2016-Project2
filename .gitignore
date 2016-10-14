@@ -96,3 +96,7 @@ ENV/
 *.aux
 
 *.gz
+
+Writeup/Writeup-blx.bib
+
+Writeup/Writeup.bbl
