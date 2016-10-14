@@ -86,30 +86,18 @@
     \centering
     \begin{tabular}{ | c | c | }
     \hline
-    $\alpha$ & CV Accuracy \\
-    \hline
-    $1 \times 10^{-20}$ & 0.88754 \\
-    \hline
-    $1 \times 10^{-18}$ & 0.88907 \\
-    \hline
-    $1 \times 10^{-16}$ & 0.89096 \\
-    \hline
-    $1 \times 10^{-14}$ & 0.89304 \\
-    \hline
-    $1 \times 10^{-12}$ & 0.89608 \\
-    \hline
-    $1 \times 10^{-10}$ & 0.89931 \\
-    \hline
-    $1 \times 10^{-8}$ & 0.90255 \\
-    \hline
-    $1 \times 10^{-6}$ & 0.90684 \\
-    \hline
-    $1 \times 10^{-4}$ & 0.91132 \\
-    \hline
-    $0.01$ & 0.91458 \\
-    \hline
-    $1$ & 0.90077 \\
-    \hline
+    $\alpha$ & CV Accuracy \\    \hline
+    $1 \times 10^{-20}$ & 0.88754 \\    \hline
+    $1 \times 10^{-18}$ & 0.88907 \\    \hline
+    $1 \times 10^{-16}$ & 0.89096 \\    \hline
+    $1 \times 10^{-14}$ & 0.89304 \\    \hline
+    $1 \times 10^{-12}$ & 0.89608 \\    \hline
+    $1 \times 10^{-10}$ & 0.89931 \\    \hline
+    $1 \times 10^{-8}$ & 0.90255 \\    \hline
+    $1 \times 10^{-6}$ & 0.90684 \\    \hline
+    $1 \times 10^{-4}$ & 0.91132 \\    \hline
+    $0.01$ & 0.91458 \\    \hline
+    $1$ & 0.90077 \\    \hline
     \end{tabular}
     \caption{Hyper-parameter grid search for Na\"ive Bayes using 100K features.}
     \end{table}
@@ -184,6 +172,7 @@
 
 \subsection{Optional}
 	As our optional additional model, we used Scikit-learn's \cite{sklearn} \texttt{LinearSVC}. This SVM produced good results, but was very slow (it took several hours to train) and did not perform quite as well as our Na\"ive Bayes implementation. We introduced bagging and semi-supervised learning in exactly the same way we did with Na\"ive Bayes, but this only marginally improved the model's performance. Because of the tremendous amount of time it took to train the model, we were unable to do much experimentation with hyper-parameters.
+	
 	We also experimented with our own implementations of neural networks and K-Nearest Neighbors, but both of these performed poorly; KNN failed to produce more than 70\% cross-validated accuracy, and the neural network failed to produce any results at all (with the number of features in our dataset, and without the ability to use sparse matrices, the memory use ballooned to several gigabytes).
 	
 %========================
@@ -192,6 +181,7 @@
 \section{Testing and Validation}
 \subsection{Linear}
 	Our Na\"ive Bayes model performed exceedingly well, both inside and outside of Kaggle. Like many other teams, our validation accuracy and cross-validated accuracy was significantly greater than the score on Kaggle. Our best-performing model (an ensemble of 100 Multinomial Na\"ive Bayes classifiers trained on data extended through semi-supervised learning) had 91.4121\% 10-fold cross-validated accuracy, but scored only 0.83188 on Kaggle. 
+	
     \begin{table}[h!]
     \centering
     \begin{tabular}{ | c | c | c | c | c | }
@@ -235,22 +225,24 @@
 
 
 \subsection{Optional}
+	Just as with other models, our SVM did well on Kaggle, but much better on the validation set. Interestingly, although the SVM did not do as well as Na\"ive Bayes on Kaggle, it far outperformed the linear model in cross-validated accuracy, with the SVM achieving 96.9328\% 10-fold CV accuracy, compared to Na\"ive Bayes' 91.4121\%.
 	
 %========================
 % Discussion
 %========================
 \section{Discussion}
 \subsection{Linear}
-	We are very happy with the results of the Na\"ive Bayes classifier. Not only were we able to achieve the top position on the Kaggle leaderboard, but we feel our code is very efficient - when comparing to other implementations (such as Scikit-learn's \texttt{MultinomialNB}), our model produced identical results, and was often marginally faster (as a result of the vectorized math and support for sparse matrices)
+	We are very happy with the results of the Na\"ive Bayes classifier. Not only were we able to achieve the top position on the Kaggle leaderboard, but we feel our code is very efficient - when comparing to other implementations (such as Scikit-learn's \texttt{MultinomialNB}), our model produced identical results, and was often marginally faster (as a result of the vectorized math and support for sparse matrices).
 	
 \subsection{Nonlinear}
     Although performing much better than the baseline classifier, random forest was not as effective as Na{\"\i}veve Bayes in this classification problem. Our best validation accuracy using our own implementation was \texttt{0.8733}, which translated to \texttt{0.7664} accuracy on the test set. Our best validation accuracy using reference library was \texttt{0.8869}, which translated to \texttt{0.7833} accuracy on the test set.
     
     Although our implementation of random forest model was accurate (performing nearly as well as the reference library), many run time optimizations could have been applied. Among these possible optimizations, process-based parallelism was most unfortunately not implemented. As a result, the implemented model took a very long time to train compared to the reference library. This also limited our grid search size to relatively small because of time constraint. Fortunately, we were able to mitigate this and utilized more CPU cores by manually training the model with different parameters in different processes.
     
-    Despite not being able to optimize the implementation significantly, we believe that the bottleneck to random forest accuracy was either at feature selection stage or the model choice itself given that the reference library did not improve validation accuracy as much as expected despite being trained with much larger number of trees and features (100000 features) compared to our implementated model. Exploring other alternatives (such as Support Vector Machines with appropriate kernel) may have yielded a better accuracy for our nonlinear model.
+    Despite not being able to optimize the implementation significantly, we believe that the bottleneck to random forest accuracy was either at feature selection stage or the model choice itself given that the reference library did not improve validation accuracy as much as expected despite being trained with much larger number of trees and features (100000 features) compared to our implemented model. Exploring other alternatives (such as Support Vector Machines with appropriate kernel) may have yielded a better accuracy for our nonlinear model.
 
 \subsection{Optional}
+	Working with SVMs on this project proved to be frustrating - the training was extremely slow when compared to Na\"ive Bayes, and the results were only marginally better, worse when we used additional methods to improve Na\"ive Bayes, like semi-supervised learning and ensemble methods.
 %========================
 % Statement of Contributions
 %========================
