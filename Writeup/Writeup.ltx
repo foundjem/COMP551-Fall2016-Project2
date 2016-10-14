@@ -27,7 +27,7 @@
  
 \author{
 	\textbf{Christopher Glasz}\\christopher.glasz@mail.mcgill.ca\\260720944
-	\and \textbf{Truong Hoai Phuoc}\\phuoc.truong2@mail.mcgill.ca\\123456789
+	\and \textbf{Truong Hoai Phuoc}\\phuoc.truong2@mail.mcgill.ca\\260526454
 }
 
 \maketitle
@@ -36,7 +36,7 @@
 % Introduction
 %========================
 \section{Introduction}
-	The goal of the project is to classify abstracts from English scientific articles into 1 of 4 possible categories: statistics, math, physics and computer science using only the text in the abstract. There were 88637 entries provided for training/validation, and 15645 entries in the test set. Our approach was to extract the text features from the abstract using Natural Language Toolkit [1] together with Scikit-Learn library [2], then either use all or a manually selected subset to these features to train several classifiers (linear and non-linear).
+	The goal of the project is to classify abstracts from English scientific articles into 1 of 4 possible categories: statistics, math, physics and computer science using only the text in the abstract. There were 88637 entries provided for training/validation, and 15645 entries in the test set. Our approach was to extract the text features from the abstract using Natural Language Toolkit \cite{nltk} together with Scikit-Learn library \cite{sklearn}, then either use all or a manually selected subset to these features to train several classifiers (linear and non-linear).
  
 %========================
 % Related Work
@@ -93,7 +93,7 @@
     
     The choice for these hyper-parameter values are done with cross validation on a grid search. To overcome the limitation of being limited to one CPU core mentioned above, the grid search was done in parallel by manually spawning multiple processes with different hyper-parameters, there by utilizing multiple available CPU cores on the machine.
     
-    During the training process, we noticed that matrix splitting at each iteration was the bottleneck, occupying on average 50\% to 60\% of the training time. Numpy array implementation would have delivered much better performance, but since the feature matrix was encoded as compress sparse row matrix, slicing performance was greatly reduced.
+    During the training process, we noticed that matrix splitting at each iteration was the bottleneck, occupying on average 50\% to 60\% of the training time. Numpy array implementation would have delivered much better performance, but since the feature matrix was encoded as compress sparse row matrix for memory efficiency (see Na{\"\i}ve Bayes implementation above), slicing performance was greatly reduced.
 
     \subsubsection{Choosing hyper-parameters}
     
@@ -192,7 +192,7 @@
 \subsection{Nonlinear}
     Although performing much better than the baseline classifier, random forest was not as effective as Na{\"\i}veve Bayes in this classification problems. Our best validation accuracy using our own implementation was \texttt{0.8733}, which translated to \texttt{0.7664} accuracy on the test set. Our best validation accuracy using reference library was \texttt{0.8869}, which translated to \texttt{0.7833} accuracy on the test set.
     
-    Although our implementation of random forest model was accurate (performing nearly as well as the reference library), many implementation optimizations could have been applied. Among these possible optimizations for our implementation, process based parallelism was most unfortunately not implemented due. As a result, the implemented model took a very long time to train compared to the reference library. This also limited our grid search size to relatively small because of time constraint. We were able to partially mitigate this and utilized more CPU cores by manually training the model with different parameters.
+    Although our implementation of random forest model was accurate (performing nearly as well as the reference library), many runtime implementation optimizations could have been applied. Among these possible optimizations for our implementation, process based parallelism was most unfortunately not implemented due. As a result, the implemented model took a very long time to train compared to the reference library. This also limited our grid search size to relatively small because of time constraint. We were able to partially mitigate this and utilized more CPU cores by manually training the model with different parameters.
     
     Despite having time constraint from the implementation perspective, we believe that the bottleneck to random forest accuracy was either at feature selection stage or the model choice itself. Given that the reference library did not improve validation accuracy as much despite being trained with much larger number of trees and features (100000 features) compared to our implementation model. Exploring some other alternatives (such as Support Vector Machines with appropriate kernel) may have yielded a better accuracy for our nonlinear model.
 
@@ -211,6 +211,17 @@ We hereby state that all the work presented in this report is that of the author
 % References
 %========================
 \printbibliography
+
+
+\begin{thebibliography}{2}
+\bibitem{nltk} 
+Bird, Steven, Edward Loper and Ewan Klein (2009), Natural Language Processing with Python. O’Reilly Media Inc.
+\bibitem{sklearn} 
+Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
+\end{thebibliography}
+
+
+
 %========================
 % Appendix
 %========================
