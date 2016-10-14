@@ -14,12 +14,12 @@ if __name__ == '__main__':
 	############################################
 	print "Reading files........................",
 	sys.stdout.flush()
-	X_trn = load_sparse_csr('X_trn_tfidf.npz')
-	X_val = load_sparse_csr('X_val_tfidf.npz')
+	X_trn = load_sparse_csr('X_trn_counts.npz')
+	X_val = load_sparse_csr('X_val_counts.npz')
 #	X_all = load_sparse_csr('X_all_tfidf.npz')
 #	X_tst = load_sparse_csr('X_tst_tfidf.npz')
-	X_all = load_sparse_csr('X_all_cheat_tfidf.npz')
-	X_tst = load_sparse_csr('X_tst_cheat_tfidf.npz')
+	X_all = load_sparse_csr('X_all_cheat_counts.npz')
+	X_tst = load_sparse_csr('X_tst_cheat_counts.npz')
 
 	ids_trn, X_trn = X_trn[:,0].toarray().astype(int), X_trn[:,1:]
 	ids_val, X_val = X_val[:,0].toarray().astype(int), X_val[:,1:]
@@ -30,27 +30,24 @@ if __name__ == '__main__':
 	Y_val = pd.read_csv('Y_val.csv', usecols=[1]).values.flatten()
 	Y_all = pd.read_csv('Y_all.csv', usecols=[1]).values.flatten()
 	print "Done."
-	
-	print "Oversampling minority classes........",
-	sys.stdout.flush()
-	X_trn, Y_trn = oversample(X_trn, Y_trn)
-	X_val, Y_val = oversample(X_val, Y_val)
-	X_all, Y_all = oversample(X_all, Y_all)
-	print "Done."
-	
+
 	############################################
 	################# Training #################
 	############################################
 	print "Training classifier..................",
 	sys.stdout.flush()
-	nb = GridSearchCV(multinomial_nb(),{'alpha':[0.0001,0.001,0.01,0.1,1,10]},cv=10)
-	nb.fit(X_trn, Y_trn)
+	nb = GridSearchCV(multinomial_nb(),{'alpha':10.0**np.arange(-20,-1),
+										'oversample_data':[True,False]},cv=10)
+	nb.fit(X_all, Y_all)
 	nb = nb.best_estimator_
 	print "Done."
+	print "Best parameter set:"
+	for k in nb.get_params().keys():
+		print "   %s: %s" % (k,nb.get_params()[k])
 
 	print "Testing on validation data...........",
 	sys.stdout.flush()
-	accuracy = nb.score(X_val, Y_val)
+	accuracy = nb.fit(X_trn,Y_trn).score(X_val, Y_val)
 	print "Done."
 
 	print "Training on all data.................",
