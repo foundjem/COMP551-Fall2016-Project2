@@ -153,8 +153,11 @@ if __name__ == '__main__':
 	from scipy import sparse
 	from sklearn.grid_search import GridSearchCV
 	from sklearn.ensemble import BaggingClassifier
-	from sklearn.cross_validation import cross_val_score
-	from utils import load_sparse_csr, semi_supervised
+	from sklearn.cross_validation import cross_val_score, ShuffleSplit
+	from sklearn.learning_curve import validation_curve, learning_curve
+	from sklearn.metrics import confusion_matrix, classification_report
+	import matplotlib.pyplot as plt
+	from utils import load_sparse_csr, semi_supervised, plot_learning_curve
 	
 	rng = np.random.RandomState(42)
 
@@ -184,11 +187,13 @@ if __name__ == '__main__':
 	print "Vanilla Multinomial Naive Bayes:"
 	print "   Grid search for best parameters......",
 	sys.stdout.flush()
-	model = GridSearchCV(multinomial_nb(),
-						 {'alpha':10.0**np.arange(-20,-1)},
-						  cv=10, n_jobs=-1)
+	model = multinomial_nb(0.01)
 	model.fit(X_trn, Y_trn)
-	model = model.best_estimator_
+#	model = GridSearchCV(multinomial_nb(),
+#						 {'alpha':10.0**np.arange(-20,-1)},
+#						  cv=10, n_jobs=-1)
+#	model.fit(X_trn, Y_trn)
+#	model = model.best_estimator_
 	print "Done."
 	print "   Best parameter set:"
 	for k in model.get_params().keys():
@@ -197,7 +202,17 @@ if __name__ == '__main__':
 	print "   Testing on validation data...........",
 	sys.stdout.flush()
 	accuracy = model.fit(X_trn,Y_trn).score(X_val, Y_val)
+	predicted = model.predict(X_val)
 	print "Done."
+	print "   Validation data confusion matrix:"
+	print confusion_matrix(Y_val, predicted)
+	print "   Classification report:\n   ",
+	print classification_report(Y_val, predicted, target_names=model.classes_)
+	title = "Learning Curves (Naive Bayes)"
+	cv = ShuffleSplit(X_all.shape[0], n_iter=100,
+						test_size=0.05, random_state=rng)
+	plot_learning_curve(model, title, X_all, Y_all, ylim=(0.7, 1.01),
+						cv=cv, n_jobs=4, train_sizes=np.linspace(.01, 1.0, 20)).show()
 
 	print "   Training on all data.................",
 	sys.stdout.flush()
@@ -259,6 +274,11 @@ if __name__ == '__main__':
 	sys.stdout.flush()
 	accuracy = model.fit(X_trn,Y_trn).score(X_val, Y_val)
 	print "Done."
+	title = "Learning Curves (Naive Bayes)"
+	cv = ShuffleSplit(X_all.shape[0], n_iter=100,
+						test_size=0.05, random_state=rng)
+	plot_learning_curve(model, title, X_all, Y_all, ylim=(0.7, 1.01),
+						cv=cv, n_jobs=4, train_sizes=np.linspace(.01, 1.0, 20)).show()
 
 	print "   Training on all data.................",
 	sys.stdout.flush()
