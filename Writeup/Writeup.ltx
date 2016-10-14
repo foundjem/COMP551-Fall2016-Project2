@@ -73,7 +73,7 @@
 	
 
 \subsection{Nonlinear}
-    Implementation of random forest adheres to the definition introduced in the lectures, with some changes for convenience in programming details. The implementation has the following hyper-parameters:
+    Random forest was chosen as our non-linear model. Implementation of random forest adheres to the definition introduced in the lectures, with some changes for convenience in programming details. The implementation has the following hyper-parameters:
     \begin{itemize}
         \item Number of trees \texttt{k} in the forest.
         \item Number of features to be randomly selected \texttt{m} at each iteration.
@@ -81,6 +81,8 @@
     \end{itemize}
     
     Regarding optimization, since each tree in the forest can be trained independently from each other, there is a good opportunity for optimizing the training by performing the training in parallel so that all CPU cores are utilized during the training. There were several attempts to improve the training process by utilizing this, but was not successful in the end due to a restriction in Python. For other main stream programming languages such as Java or C/C++, the operating system will automatically distribute thread level parallelism work to all available CPU cores. In contrast, Python underlying implementation using C (CPython) has the Global Interpreter Lock which only allows one block of code of the program to be executed. This results in thread parallelism being useless for CPU intensive tasks (but is still useful for IO bounded tasks). Java implementation of Python (Jython) does not suffer from this, but is the amount of available libraries is very limited since most Python extensions for machine learning packages are written using C/C++ for performance reason.
+    
+    Once each tree node finalized in our training, we discard the data held by that node, and only kept the class predictions together with their weights (e.g. 25\% math, 25\% physics, 35\% computer science and 15\% statistics). This is to save memory as at the end of the training process, data instance was not necessary anymore (unless we wanted to continue training the tree possibly with new data, which is beyond the scope of this project).
     
     The choice for these hyper-parameter values are done with cross validation on a grid search. To overcome the limitation of being limited to one CPU core mentioned above, the grid search was done in parallel by manually spawning multiple processes with different hyper-parameters, there by utilizing multiple available CPU cores on the machine.
     
@@ -135,7 +137,7 @@
     \hline
     \end{tabular}
     \end{table}
-    
+
     From the table, the best validation accuracy achieved was \texttt{0.8733} with 40 trees, 10 features and 20 minimum node size. The following observations were made:
     \begin{itemize}
         \item It is noticeable that accuracy was increasing significantly as the number of trees increased. For example, No. 7 and No. 10 (improved ~6\% by doubling the number of trees). Increasing number of trees in the forest naturally increased overall runtime.
@@ -143,7 +145,7 @@
         \item Lastly, an increase in the minimum size of the node deteriorates the performance, at the cost of runtime. For example, No. 2 and No.11
     \end{itemize}
     
-    To compare our implementation with the reference implementation of scikit-learn, we also did several runs using the library on 55000 and 100000 generated features, since the runtime is much better compared to our implementation). The runtime was much better due to implementation optimization of the matrix slicing process. The following table describes the grid search using the scikit-learn library. Value of m (number of features used at each iteration) was chosen to be square root of the number of features (by default from the library).
+    To compare our implementation with the reference implementation of scikit-learn, we also did several runs using the library on 55000 and 100000 generated features, since the runtime is much better compared to our implementation). The runtime was much better due to optimization of matrix slicing process. That said, we were not able to use the reference library to train for beyond 1000 trees due to memory limitation. The following table describes the grid search using the scikit-learn library. Value of m (number of features used at each iteration) was chosen to be square root of the number of features (by default from the library).
     
     \begin{table}[]
     \centering
@@ -161,12 +163,12 @@
     \hline
     4 & 1000 & 1 & 0.8869 & 100k features \\
     \hline
-    5 & 1000 & 1 & 0.8808 & 100k features \\
+    5 & 1000 & 1 & 0.8808 & 100k features, 10 folds cv \\
     \hline
     \end{tabular}
     \end{table}
     
-    Despite being able to train with the number of trees and number of features significantly larger, the reference library did not deliver a significant improvement in terms of validation accuracy. Reference library best validation accuracy was \texttt{0.8869} while our implementation best validation accuracy was \texttt{0.8733}. Despite this, the performance of random forest was much worse compared to that of Na{\"\i}ve Bayes.
+    It is noticeable that using 100000 features improved the validation accuracy. Despite being able to train with the number of trees and number of features significantly larger, the reference library did not deliver a significant improvement in terms of validation accuracy. Reference library best validation accuracy was \texttt{0.8869} while our implementation best validation accuracy was \texttt{0.8733}. Despite this, the performance of random forest was much worse compared to that of Na{\"\i}ve Bayes.
 
 
 \subsection{Optional}
@@ -175,13 +177,23 @@
 % Discussion
 %========================
 \section{Discussion}
+\subsection{Linear}
+\subsection{Nonlinear}
+    Although performing much better than the baseline classifier, random forest was not as effective as Na{\"\i}veve Bayes in this classification problems. Our best validation accuracy was 0.8869, which translated to 0.7833 accuracy on test set.
+    
+    Although our implementation of random forest model was accurate (performing very nearly as well as the reference library), many implementation optimizations could have been applied. Among these possible optimization for our implementation, process based parallelism was most unfortunately not implemented due. As a result, the implemented model took a very long time to train compared to the reference library. This also limited our grid search size to relatively small because of time constraint. We were able to partially mitigate this and utilized more CPU cores by manually training the model with different parameters.
+    
+    Despite having time constraint from the implementation perspective, we believe that the bottleneck to random forest accuracy was either at feature selection stage or the model choice itself. Given that the reference library did not improve validation accuracy as much despite being trained with much larger number of trees and features (100000 features) compared to our implementation model. Exploring some other alternatives (such as Support Vector Machines with appropriate kernel) may have yielded a better accuracy for our nonlinear model.
+
 
 %========================
 % Statement of Contributions
 %========================
 \section{Statement of Contributions}
+We hereby state that all the work presented in this report is that of the authors.
 \subsection{Christopher Glasz}
 \subsection{Truong Hoai Phuoc}
+    Hoai Phuoc Truong was responsible for the introduction of the report. He was also responsible for the implementation of nonlinear model and writing up nonlinear section of the report.
  
 %========================
 % References
