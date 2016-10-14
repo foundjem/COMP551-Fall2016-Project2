@@ -36,7 +36,7 @@
 % Introduction
 %========================
 \section{Introduction}
-	\textit{Blah blah blah}
+	The goal of the project is to classify abstracts from English scientific articles into 1 of 4 possible categories: statistics, math, physics and computer science using only the text in the abstract. There were 88637 entries provided for training/validation, and 15645 entries in the test set. Our approach was to extract the text features from the abstract using Natural Language Toolkit [1] together with Scikit-Learn library [2], then either use all or a manually selected subset to these features to train several classifiers (linear and non-linear).
  
 %========================
 % Related Work
@@ -73,6 +73,20 @@
 	
 
 \subsection{Nonlinear}
+    Implementation of random forest adheres to the definition introduced in the lectures, with some changes for convenience in programming details. The implementation has the following hyper-parameters:
+    \begin{itemize}
+        \item Number of trees \texttt{k} in the forest.
+        \item Number of features to be randomly selected \texttt{m} at each iteration.
+        \item Minimum size of the node \texttt{min\_node\_size}, at which point it will no longer be split.
+    \end{itemize}
+    
+    Regarding optimization, since each tree in the forest can be trained independently from each other, there is a good opportunity for optimizing the training by performing the training in parallel so that all CPU cores are utilized during the training. There were several attempts to improve the training process by utilizing this, but was not successful in the end due to a restriction in Python. For other main stream programming languages such as Java or C/C++, the operating system will automatically distribute thread level parallelism work to all available CPU cores. In contrast, Python underlying implementation using C (CPython) has the Global Interpreter Lock which only allows one block of code of the program to be executed. This results in thread parallelism being useless for CPU intensive tasks (but is still useful for IO bounded tasks). Java implementation of Python (Jython) does not suffer from this, but is the amount of available libraries is very limited since most Python extensions for machine learning packages are written using C/C++ for performance reason.
+    
+    The choice for these hyper-parameter values are done with cross validation on a grid search. To overcome the limitation of being limited to one CPU core mentioned above, the grid search was done in parallel by manually spawning multiple processes with different hyper-parameters, there by utilizing multiple available CPU cores on the machine.
+    
+    During the training process, we noticed that matrix splitting at each iteration was the bottleneck, occupying on average 50\% to 60\% of the training time. Numpy array implementation would have delivered much better performance, but since the feature matrix was encoded as compress sparse row matrix, slicing performance was greatly reduced.
+
+
 \subsection{Optional}
 
 %========================
@@ -81,6 +95,80 @@
 \section{Testing and Validation}
 \subsection{Linear}
 \subsection{Nonlinear}
+    A grid search for hyper-parameters was used during the testing, each with cross validation with 5 folds. Due to the constraints in performance mentioned previously, we were only able to train the implemented forests with 55000 extracted features. Note that the runtime might not be accurate due to the use of swap memory during training (since default RAM was insufficient) and interference of other processes (e.g. browser, media player…)
+    
+    \begin{table}[]
+    \centering
+    \caption{Hyper-parameter grid search for random forest model using 55000 features.}
+    \label{my-label}
+    \begin{tabular}{|c|c|c|c|c|c|}
+    \hline
+    No & k & m & min\_node\_size & validation\_accuracy & runtime(s) \\
+    \hline
+    1 & 5 & 10 & 20 & 0.7568 & 2223 \\
+    \hline
+    2 & 10 & 10 & 20 & 0.8201 & 4560 \\
+    \hline
+    3 & 10 & 20 & 20 & 0.8335 & 15860 \\
+    \hline
+    4 & 10 & 30 & 20 & 0.8358 & 13865 \\
+    \hline
+    5 & 10 & 40 & 20 & 0.8382 & 10515 \\
+    \hline
+    6 & 20 & 10 & 20 & 0.8493 & 9863 \\
+    \hline
+    7 & 20 & 20 & 20 & 0.8120 & 34767 \\
+    \hline
+    8 & 20 & 30 & 20 & 0.8244 & 44201 \\
+    \hline
+    9 & 30 & 10 & 20 & 0.8639 & 29197 \\
+    \hline
+    10 & 40 & 20 & 20 & 0.8733 & 43002 \\
+    \hline
+    11 & 10 & 10 & 50 & 0.8093 & 3277 \\
+    \hline
+    12 & 20 & 20 & 50 & 0.8598 & 12579 \\
+    \hline
+    13 & 20 & 30 & 50 & 0.8575 & 20011 \\
+    \hline
+    14 & 30 & 20 & 50 & 0.8683 & 30230 \\
+    \hline
+    \end{tabular}
+    \end{table}
+    
+    From the table, the best validation accuracy achieved was \texttt{0.8733} with 40 trees, 10 features and 20 minimum node size. The following observations were made:
+    \begin{itemize}
+        \item It is noticeable that accuracy was increasing significantly as the number of trees increased. For example, No. 7 and No. 10 (improved ~6\% by doubling the number of trees). Increasing number of trees in the forest naturally increased overall runtime.
+        \item On the other hand, an increase in the number of features used at each iteration did not improve validation accuracy as much (e.g. No.4 and 5, No.12 and 13). Increasing number of features used at each iteration also naturally increased overall runtime.
+        \item Lastly, an increase in the minimum size of the node deteriorates the performance, at the cost of runtime. For example, No. 2 and No.11
+    \end{itemize}
+    
+    To compare our implementation with the reference implementation of scikit-learn, we also did several runs using the library on 55000 and 100000 generated features, since the runtime is much better compared to our implementation). The runtime was much better due to implementation optimization of the matrix slicing process. The following table describes the grid search using the scikit-learn library. Value of m (number of features used at each iteration) was chosen to be square root of the number of features (by default from the library).
+    
+    \begin{table}[]
+    \centering
+    \caption{Hyper-parameter grid search for reference random forest model from scikit-learn}
+    \label{my-label}
+    \begin{tabular}{|c|c|c|c|c|}
+    \hline
+    No & k & min\_node\_size & validation\_accuracy & Note \\
+    \hline
+    1 & 500 & 1 & 0.8803 & 55k features \\
+    \hline
+    2 & 1000 & 20 & 0.8774 & 55k features \\
+    \hline
+    3 & 1000 & 1 & 0.8806 & 55k features \\
+    \hline
+    4 & 1000 & 1 & 0.8869 & 100k features \\
+    \hline
+    5 & 1000 & 1 & 0.8808 & 100k features \\
+    \hline
+    \end{tabular}
+    \end{table}
+    
+    Despite being able to train with the number of trees and number of features significantly larger, the reference library did not deliver a significant improvement in terms of validation accuracy. Reference library best validation accuracy was \texttt{0.8869} while our implementation best validation accuracy was \texttt{0.8733}. Despite this, the performance of random forest was much worse compared to that of Na{\"\i}ve Bayes.
+
+
 \subsection{Optional}
 	
 %========================
