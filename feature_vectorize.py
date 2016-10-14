@@ -1,95 +1,49 @@
-'''
-Created on Jul 14, 2015
-
-@author: jcheung
-'''
-
-import sys, csv
-import operator
-import collections
-import sklearn
+import sys, re
 import numpy as np
+import pandas as pd
 import nltk
-from nltk.tokenize import sent_tokenize, word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem.wordnet import WordNetLemmatizer
-from sklearn import svm, linear_model, naive_bayes
-from sklearn.grid_search import GridSearchCV
-from sklearn.metrics import confusion_matrix
-
-stoplist = set(stopwords.words('english'))
-lmtzr = WordNetLemmatizer()
-
-# model parameters
-n = 2
-limit_features = True
-nb_features_per_ngram = [2000,200,40,0,0]
-lemma = True
-lower = True
-stop = True
+from scipy import sparse
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from utils import save_sparse_csr
 
 
-def read_data(file):
-	with open(file, 'rt') as f:
-		reader = csv.reader(f)
-		header = next(reader)
-		data = list(reader)
-	header = {h:i for i,h in enumerate(header)}
-	return header, data
-
-def write_data(file, data):
-	with open(file,'wb') as f:
-		writer = csv.writer(f, delimiter=',')
-		for row in data:
-			writer.writerow(row)
-
-def get_tokens(lines):
-	""" Tokenize file into words. """
-	paras = [[s for s in sent_tokenize(l)] for l in lines]
-	# Remove punctuation
-	not_punct = lambda c: c.isalnum() or c == ' ' or c == '-'
-	paras = [[''.join([c for c in s if not_punct(c)]) for s in l] for l in paras]
-	return [[t for s in sents for t in word_tokenize(s)] for sents in paras]
-
-def treat_tokens(tokens, lemma, lower, stop):
-	""" Treat the tokens according to the provided rules
-		lemma: (boolean) whether or not to lemmatize
-		lower: (boolean) whether or not to lowercase everything
-		stop:  (boolean) whether or not to filter out stop words
-		"""
-	if lower:
-		tokens = [t.lower() for t in tokens]
-	if stop:
-		tokens = [t for t in tokens if t not in stoplist]
-	if lemma:
-		tokens = lemmatize(tokens)
-	return tokens
-
-def lemmatize(tokens):
-	""" Lemmatize the given set of tokens """
-	tag_dict ={'NN':'n','JJ':'a','VB':'v','RB':'r'}
-	tags = zip(*nltk.pos_tag(tokens))[1]
+class lemma_tokenizer(object):
+	""" Combined tokenizer and lemmatizer """
 	
-	# Convert tags to 'n','a','v','r'
-	tags = [tag_dict[p[:2]] if p[:2] in tag_dict else 'n' for p in tags]
-	return [lmtzr.lemmatize(*pair) for pair in zip(tokens,tags)]
-
-def get_ngrams(tokens, N):
-	""" Get all ngrams for n <= N 
-		Returns list of lists. Kth list contains all K-grams.
+	def __init__(self):
+		# Tokenizer represented as a regular expression that beaks the
+		#	document up into words containing only alphabetical characters
+		self.tokenizer = re.compile(r"(?u)\b[a-zA-Z]{2,}\b").findall
+		
+		# WordNetLemmatizer only understands certain POS tags
+		self.td ={'NN':'n','JJ':'a','VB':'v','RB':'r'}
+		self.lmtzr = nltk.stem.WordNetLemmatizer().lemmatize
+	
+	def __call__(self, doc):
+		""" Tokenize the given document
+		
+		Parameters
+		----------
+		doc : str
+			The string to tokenize
+			
+		Returns
+		-------
+		tokens : list of str
+			Lemmatized tokens
 		"""
-	lists = [tokens[n:] for n in range(N)]
-	return [zip(*lists[:n+1]) for n in range(N)]
-
-def feature_vector(feature_tokens, tokens):
-	""" Extracts features from tokens into a feature vector """
-	return [tokens.count(t) for t in feature_tokens]
-
-def sort_by_count(tokens):
-	""" Gives unique tokens sorted descending by number of occurrences """
-	counts = collections.Counter(tokens)
-	return sorted(counts.keys(), key=counts.get, reverse=True)
-
+		# Tokenize the document with a regular expression
+		tokens = self.tokenizer(doc)
+		
+		# Get part-of-speech tags for more effective lemmatization
+		tags = [(w,t[:2]) for w,t in nltk.pos_tag(tokens)]
+		
+		# Convert tags to form the lemmatizer can understand
+		tags = [(w,self.td[t] if t in self.td else 'n') for w,t in tags]
+		
+		# Lemmatize each token
+		return [self.lmtzr(*pair) for pair in tags]
 
 # Main driver code
 if __name__ == '__main__':
@@ -99,116 +53,132 @@ if __name__ == '__main__':
 	############################################
 	print "Reading files........................",
 	sys.stdout.flush()
-	h1, l1 = read_data('datasets/train_in.csv')
-	h2, l2 = read_data('datasets/train_out.csv')
-	h3, l3 = read_data('datasets/test_in.csv')
-	id1, train_lines = zip(*l1)
-	id2, train_labels = zip(*l2)
-	id3, test_lines = zip(*l3)
-	print "Done."
+	dat_all = pd.read_csv('datasets/train_in.csv').values
+	dat_tst = pd.read_csv('datasets/test_in.csv').values
+	lab_all = pd.read_csv('datasets/train_out.csv').values
 	
-	print "Extracting tokens....................",
-	sys.stdout.flush()
-	train_tokens = get_tokens(train_lines)
-	test_tokens = get_tokens(test_lines)
-	print "Done."
+	# Get rid of invalid rows
+	keepers = lab_all[:,1] != 'category'
+	dat_all = dat_all[keepers,:]
+	lab_all = lab_all[keepers,:]
 	
-	print "Treating tokens......................",
-	sys.stdout.flush()
-	train_tokens = [treat_tokens(doc, lemma, lower, stop) for doc in train_tokens]
-	test_tokens = [treat_tokens(doc, lemma, lower, stop) for doc in test_tokens]
-	print "Done."
+	# Split into training and validation sets
+	v_split = int(0.8 * dat_all.shape[0])
+	ids_trn = dat_all[:v_split,0].astype(int)
+	ids_val = dat_all[v_split:,0].astype(int)
+	ids_all = dat_all[:,0].astype(int)
+	ids_tst = dat_tst[:,0].astype(int)
 	
+	doc_trn = dat_all[:v_split,1]
+	doc_val = dat_all[v_split:,1]
+	doc_all = dat_all[:,1]
+	doc_tst = dat_tst[:,1]
+	doc_cht = np.hstack((doc_all, doc_tst))
 	
-	print "Treating labels......................",
-	sys.stdout.flush()
-	label_codes = {l:i for i,l in enumerate(list(set(train_labels)))}
-#	train_labels = [label_codes[l] for l in train_labels]
-	print "Done."
-	
-	
-
-	############################################
-	############ N-gram calculation ############
-	############################################
-	print "Constructing N-grams.................",
-	sys.stdout.flush()
-	train_ngrams = [get_ngrams(tokens,n) for tokens in train_tokens]
-	test_ngrams = [get_ngrams(tokens,n) for tokens in test_tokens]
-	print "Done"
-	
-	v_split = int(0.8 * len(train_labels))
-	t_ids, v_ids = id1[:v_split], id1[v_split:]
-	t_labels, v_labels = train_labels[:v_split], train_labels[v_split:]
-	t_ngrams, v_ngrams = train_ngrams[:v_split], train_ngrams[v_split:]
-	
-	print "Merging interdocument N-grams........",
-	sys.stdout.flush()
-	all_ngrams = [[g for doc in kgrams for g in doc] for kgrams in zip(*train_ngrams)]
-	all_t_ngrams = [[g for doc in kgrams for g in doc] for kgrams in zip(*t_ngrams)]
-	print "Done"
-	
-	print "Merging intradocument N-grams........",
-	sys.stdout.flush()
-	t_ngrams = [[g for ngrams in doc for g in ngrams] for doc in t_ngrams]
-	v_ngrams = [[g for ngrams in doc for g in ngrams] for doc in v_ngrams]
-	train_ngrams = [[g for ngrams in doc for g in ngrams] for doc in train_ngrams]
-	test_ngrams = [[g for ngrams in doc for g in ngrams] for doc in test_ngrams]
-	print "Done"
-	
-
-	############################################
-	############ Feature selection #############
-	############################################
-	print "Selecting feature N-grams............",
-	sys.stdout.flush()
-	
-	feature_t_ngrams = []
-	feature_ngrams = []
-	if limit_features:
-		for k,kgrams in enumerate(all_t_ngrams):
-			common = sort_by_count(kgrams)[:nb_features_per_ngram[k]]
-			feature_t_ngrams.extend(common)
-		
-		for k,kgrams in enumerate(all_ngrams):
-			common = sort_by_count(kgrams)[:nb_features_per_ngram[k]]
-			feature_ngrams.extend(common)
-	else:
-		feature_t_ngrams = [k for kgrams in all_t_ngrams for k in kgrams]
-		feature_ngrams = [k for kgrams in all_ngrams for k in kgrams]
-	print "Done"
-	
-
-
-	############################################
-	######## Feature vector construction #######
-	############################################
-	print "Constructing feature vectors.........",
-	sys.stdout.flush()
-	Xt = [feature_vector(feature_t_ngrams, ngrams) for ngrams in t_ngrams]
-	Yt = t_labels
-	
-	Xv = [feature_vector(feature_t_ngrams, ngrams) for ngrams in v_ngrams]
-	Yv = v_labels
-	
-	X = [feature_vector(feature_ngrams, ngrams) for ngrams in train_ngrams]
-	Y = train_labels
-	
-	XT = [feature_vector(feature_ngrams, ngrams) for ngrams in test_ngrams]
+	lab_trn = lab_all[:v_split,1]
+	lab_val = lab_all[v_split:,1]
+	lab_all = lab_all[:,1]
 	print "Done."
 
+	print "Building vectorizer..................",
+	sys.stdout.flush()
+	vectorizer = CountVectorizer(tokenizer=lemma_tokenizer(),
+								 stop_words='english',
+								 lowercase=True,
+								 max_features=90000,
+								 min_df=1)
+	ng_vectorizer = CountVectorizer(tokenizer=lemma_tokenizer(),
+									ngram_range=(2,3),
+									stop_words='english',
+									lowercase=True,
+									max_features=10000,
+									min_df=1)
+	print "Done."
+	
+	print "Building TF-IDF transformer..........",
+	sys.stdout.flush()
+	transformer = TfidfTransformer()
+	print "Done."
 
+	print "Extracting training features.........",
+	sys.stdout.flush()
+	X_trn_counts = vectorizer.fit_transform(doc_trn)
+	X_trn_counts = sparse.hstack((X_trn_counts,
+								  ng_vectorizer.fit_transform(doc_trn)))
+								  
+	X_val_counts = vectorizer.transform(doc_val)
+	X_val_counts = sparse.hstack((X_val_counts,
+								  ng_vectorizer.transform(doc_val)))
+								  
+	header_trn = ['id']
+	header_trn.extend(vectorizer.get_feature_names())
+	header_trn.extend(ng_vectorizer.get_feature_names())
+	header_trn = np.array(header_trn)
+	print "Done."
+	
+	print "Extracting testing features..........",
+	sys.stdout.flush()
+	vectorizer.fit(doc_cht)
+	ng_vectorizer.fit(doc_cht)
+	X_all_counts = vectorizer.transform(doc_all)
+	X_all_counts = sparse.hstack((X_all_counts,
+								  ng_vectorizer.transform(doc_all)))
+								  
+	X_tst_counts = vectorizer.transform(doc_tst)
+	X_tst_counts = sparse.hstack((X_tst_counts,
+								  ng_vectorizer.transform(doc_tst)))
+								  
+	header_all = ['id']
+	header_all.extend(vectorizer.get_feature_names())
+	header_all.extend(ng_vectorizer.get_feature_names())
+	header_all = np.array(header_all)
+	print "Done."
+
+	print "Applying TF-IDF transform............",
+	sys.stdout.flush()
+	X_trn_tfidf = transformer.fit_transform(X_trn_counts)
+	X_val_tfidf = transformer.transform(X_val_counts)
+	
+	X_all_tfidf = transformer.fit_transform(X_all_counts)
+	X_tst_tfidf = transformer.transform(X_tst_counts)
+	print "Done."
+
+	# Preppend IDs
+	ids_trn = np.array(ids_trn).astype(int)[:,None]
+	ids_val = np.array(ids_val).astype(int)[:,None]
+	ids_all = np.array(ids_all).astype(int)[:,None]
+	ids_tst = np.array(ids_tst).astype(int)[:,None]
+
+	X_trn_counts = sparse.hstack((ids_trn, X_trn_counts))
+	X_val_counts = sparse.hstack((ids_val, X_val_counts))
+	X_all_counts = sparse.hstack((ids_all, X_all_counts))
+	X_tst_counts = sparse.hstack((ids_tst, X_tst_counts))
+
+	X_trn_tfidf = sparse.hstack((ids_trn, X_trn_tfidf))
+	X_val_tfidf = sparse.hstack((ids_val, X_val_tfidf))
+	X_all_tfidf = sparse.hstack((ids_all, X_all_tfidf))
+	X_tst_tfidf = sparse.hstack((ids_tst, X_tst_tfidf))
+	
+	Y_trn = np.array(lab_trn)[:,None]
+	Y_val = np.array(lab_val)[:,None]
+	Y_all = np.array(lab_all)[:,None]
+
+	Y_trn =	np.hstack((ids_trn, Y_trn))
+	Y_val =	np.hstack((ids_val, Y_val))
+	Y_all =	np.hstack((ids_all, Y_all))
+	
 	print "Writing to file......................",
 	sys.stdout.flush()
-	write_data('train_in.csv', [['ID'] + feature_t_ngrams] + zip(*[t_ids]+zip(*Xt)))
-	write_data('train_out.csv', [['ID','label']] + zip(t_ids, Yt))
-	
-	write_data('validation_in.csv', [['ID'] + feature_t_ngrams] + zip(*[v_ids]+zip(*Xv)))
-	write_data('validation_out.csv', [['ID','label']] + zip(v_ids, Yv))
-	
-	write_data('all_train_in.csv', [['ID'] + feature_ngrams] + zip(*[id1]+zip(*X)))
-	write_data('all_train_out.csv', [['ID','label']] + zip(id1, Y))
-	
-	write_data('test_in.csv', [['ID'] + feature_ngrams] + zip(*[id3]+zip(*XT)))
-	print "Done."
+	save_sparse_csr('X_trn_counts', sparse.csr_matrix(X_trn_counts))
+	save_sparse_csr('X_val_counts', sparse.csr_matrix(X_val_counts))
+	save_sparse_csr('X_all_counts', sparse.csr_matrix(X_all_counts))
+	save_sparse_csr('X_tst_counts', sparse.csr_matrix(X_tst_counts))
+	save_sparse_csr('X_trn_tfidf', sparse.csr_matrix(X_trn_tfidf))
+	save_sparse_csr('X_val_tfidf', sparse.csr_matrix(X_val_tfidf))
+	save_sparse_csr('X_all_tfidf', sparse.csr_matrix(X_all_tfidf))
+	save_sparse_csr('X_tst_tfidf', sparse.csr_matrix(X_tst_tfidf))
 
+	np.savetxt('Y_trn.csv', Y_trn, delimiter=',', fmt='%s', header='id,category')
+	np.savetxt('Y_val.csv', Y_val, delimiter=',', fmt='%s', header='id,category')
+	np.savetxt('Y_all.csv', Y_all, delimiter=',', fmt='%s', header='id,category')
+	print "Done.\a" # Beep to let you know it's done
