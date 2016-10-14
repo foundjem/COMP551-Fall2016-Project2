@@ -156,7 +156,6 @@ if __name__ == '__main__':
 	from sklearn.cross_validation import cross_val_score, ShuffleSplit
 	from sklearn.learning_curve import validation_curve, learning_curve
 	from sklearn.metrics import confusion_matrix, classification_report
-	import matplotlib.pyplot as plt
 	from utils import load_sparse_csr, semi_supervised, plot_learning_curve
 	
 	rng = np.random.RandomState(42)
@@ -187,14 +186,18 @@ if __name__ == '__main__':
 	print "Vanilla Multinomial Naive Bayes:"
 	print "   Grid search for best parameters......",
 	sys.stdout.flush()
-	model = multinomial_nb(0.01)
-	model.fit(X_trn, Y_trn)
-#	model = GridSearchCV(multinomial_nb(),
-#						 {'alpha':10.0**np.arange(-20,-1)},
-#						  cv=10, n_jobs=-1)
+#	model = multinomial_nb(0.01)
 #	model.fit(X_trn, Y_trn)
-#	model = model.best_estimator_
+	model = GridSearchCV(multinomial_nb(),
+						 {'alpha':np.logspace(-20,0,11)},
+						  cv=10, n_jobs=-1)
+	model.fit(X_trn, Y_trn)
+	cv_results = model.grid_scores_
+	model = model.best_estimator_
 	print "Done."
+	print "   Grid search results:"
+	for k in cv_results:
+		print "      %s" % str(k)
 	print "   Best parameter set:"
 	for k in model.get_params().keys():
 		print "      %s: %s" % (k,model.get_params()[k])
@@ -278,7 +281,7 @@ if __name__ == '__main__':
 	cv = ShuffleSplit(X_all.shape[0], n_iter=100,
 						test_size=0.05, random_state=rng)
 	plot_learning_curve(model, title, X_all, Y_all, ylim=(0.7, 1.01),
-						cv=cv, n_jobs=4, train_sizes=np.linspace(.01, 1.0, 20)).show()
+						cv=cv, n_jobs=1, train_sizes=np.linspace(.01, 1.0, 20)).show()
 
 	print "   Training on all data.................",
 	sys.stdout.flush()
