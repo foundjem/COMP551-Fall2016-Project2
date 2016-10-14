@@ -13,10 +13,10 @@ k, m, min_node_size, validation_accuracy, runtime(secs), note
 20, 30, 50, 0.857513537906, 20010.8196659, 
 30, 20, 50, 0.868287454874, 30230.315177, 
 40, 20, 20, 0.873307761733, 43001.6590531, 
-500, default, 0.880274, _, 55k lib run
-1000, 20, 0.877420, _, 55k lib run
-1000, default, 0.880556, _, 55k lib run
-1000, default, 0.886919697879, _, 100k lib run cv = 10
-1000, default, 0.880782075003, _, 100k lib run cv = 10
+500, default, 1, 0.880274, _, 55k lib run
+1000, default, 20, 0.877420, _, 55k lib run
+1000, default, 1, 0.880556, _, 55k lib run
+1000, default, 1, 0.886919697879, _, 100k lib run cv = 10
+1000, default, 1, 0.880782075003, _, 100k lib run cv = 10
 
 
