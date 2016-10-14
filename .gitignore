@@ -92,3 +92,7 @@ ENV/
 *.csv
 
 *.npz
+
+*.aux
+
+*.gz
