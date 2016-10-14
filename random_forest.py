@@ -26,8 +26,6 @@ def execute_in_parallel(lambda_list, args, timeout_seconds = None, max_worker = 
 	for p in all_processes:
 		p.join()
 
-POSITIVE_VALUE = 1
-NEGATIVE_VALUE = 0
 MID_VALUE = 0.5
 
 total_time = 0
@@ -92,9 +90,9 @@ class TreeNode(object):
 	def predict(self, x):
 		assert self.is_leaf()
 		if len(self.y) > 0:
-			return self.y[0]
+			return collections.Counter(self.y).most_common()[0][0]
 		else: # We have no data in this node, so the best we can do is random.
-			return random.choice([NEGATIVE_VALUE,POSITIVE_VALUE])
+			return random.choice(['math', 'cs', 'stat', 'physics'])
 
 	def split(self, decision):
 		s = time.time()
@@ -111,8 +109,8 @@ class TreeNode(object):
 
 		s = time.time()
 		false_X = self.X[false]
-		total_time += time.time() - s
 		false_y = self.y[false.flatten()]
+		total_time += time.time() - s
 
 #        false_X = np.array(map(lambda index : self.X[index], false))
 #        false_y = list(map(lambda index : self.y[index], false))
@@ -163,7 +161,6 @@ class RandomForest(object):
 	"""Implementation of random forest model"""
 	def __init__(self, metadata = None, k = 5, m = 10, min_node_size = 20):
 		super(RandomForest, self).__init__()
-		print "Random forest object with k = {0}, m = {1} and min_node_size = {2}".format(k, m , min_node_size)
 		self.k = k
 		self.m = m
 
@@ -196,6 +193,7 @@ class RandomForest(object):
 
 	def fit(self, X, y):
 		assert len(self.metadata) == X.shape[1]
+		print "Random forest object with k = {0}, m = {1} and min_node_size = {2}".format(self.k, self.m , self.min_node_size)
 
 		self.root_nodes = []
 		# non_zero_leaf_nodes = [[node] for node in self.root_nodes] # List of stacks of nodes to consider
@@ -308,15 +306,14 @@ if __name__ == "__main__":
 	############################################
 	################# Get data #################
 	############################################
-	print "Reading files........................",
-	sys.stdout.flush()
+	print "Reading files........................"
 
 #    X_trn = np.genfromtxt('extracted_features/X_trn.csv', delimiter=',', dtype=int)
 #    X_val = np.genfromtxt('extracted_features/X_val.csv', delimiter=',', dtype=int)
 #    # X_all = np.genfromtxt('extracted_features/X_all.csv', delimiter=',', dtype=int)
 #    X_tst = np.genfromtxt('extracted_features/X_tst.csv', delimiter=',', dtype=int)
 
-	ROW_COUNT = 600
+	ROW_COUNT = 2000
 	X_trn = load_sparse_csr('{0}/X_trn_tfidf.npz'.format(args.feature_directory))
 	X_val = load_sparse_csr('{0}/X_val_tfidf.npz'.format(args.feature_directory))
 	X_all = load_sparse_csr('{0}/X_all_tfidf.npz'.format(args.feature_directory))
@@ -352,7 +349,7 @@ if __name__ == "__main__":
 	print "Done."
 
 	model = RandomForest(['c' for i in xrange(features_count)], k = args.k, m = args.m, min_node_size = args.min_node_size)
-	# model = GridSearchCV(model, {'k':[2,10,20,30,50,100], 'm': [2,4,8,16], 'min_node_size' : [20, 50], 'metadata' : [['c' for i in xrange(features_count)]]}, cv = 10)
+	# model = GridSearchCV(model, {'k':[10,20,30,50,100], 'm': [10, 20, 30, 40], 'min_node_size' : [20, 50], 'metadata' : [['c' for i in xrange(features_count)]]}, cv = 10)
 
 	if args.validation:
 		print "Training classifier.................."
