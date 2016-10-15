@@ -36,12 +36,13 @@
 % Introduction
 %========================
 \section{Introduction}
-	The goal of the project is to classify abstracts from English scientific articles into 1 of 4 possible categories: statistics, math, physics and computer science using only the text in the abstracts. There were 88637 entries provided for training/validation, and 15645 entries in the test set. Our approach was to extract the text features from the abstract using Natural Language Toolkit \cite{nltk} together with Scikit-Learn library \cite{sklearn}, and then either use all or a manually selected subset of these features to train several classifiers (linear and non-linear).
+	The goal of the project is to classify abstracts from English scientific articles into 1 of 4 possible categories: statistics, math, physics and computer science using only the text in the abstracts. There were 88637 entries provided for training/validation, and 15645 entries in the test set. Our approach was to extract the text features from the abstract using Natural Language Toolkit \cite{nltk} together with Scikit-Learn library \cite{sklearn}, and then either use all or a manually selected subset of these features to train several classifiers (linear and nonlinear).
  
 %========================
 % Related Work
 %========================
 \section{Related work}
+    There has been many discussions of successful use of Na{\"\i}ve Bayes for text classification such as multi-variate Bernoulli model by Larkey and Croft (1996) \cite{larkey}, or multinomial model by Mitchell (1997) \cite{Mitchell}. In addition, there has also been successful application of more complex models such as Support Vector Machines (SVM) in text classifications (e.g. Joachims (1998) \cite{Joachims}). In this project we aim to explore these approaches (linear and nonlinear) on classification of scientific paper abstracts.
 
 %========================
 % Problem Representation
@@ -269,20 +270,11 @@ We hereby state that all the work presented in this report is that of the author
 \subsection{Christopher Glasz}
     I implemented the code for feature selection, as well as the linear model (Na\"ive Bayes) and the optional method (SVM). I also produced the code for semi-supervised learning, and the sections of the report related to this work.
 \subsection{Hoai Phuoc Truong}
-    Hoai Phuoc Truong was responsible for the introduction of the report. He was also responsible for the implementation of nonlinear model and writing up nonlinear section of the report.
+    Hoai Phuoc Truong was responsible for the introduction and the related work section of the report. He was also responsible for the implementation of nonlinear model and writing up nonlinear section of the report.
     
  
 %========================
 % References
 %========================
 \printbibliography
-
-
-\begin{thebibliography}{2}
-\bibitem{nltk} 
-Bird, Steven, Edward Loper and Ewan Klein (2009), Natural Language Processing with Python. O’Reilly Media Inc.
-\bibitem{sklearn} 
-Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
-\end{thebibliography}
- 
 \end{document}
