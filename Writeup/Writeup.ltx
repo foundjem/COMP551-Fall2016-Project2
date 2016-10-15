@@ -234,6 +234,8 @@
 \subsection{Linear}
 	We are very happy with the results of the Na\"ive Bayes classifier. Not only were we able to achieve the top position on the Kaggle leaderboard, but we feel our code is very efficient - when comparing to other implementations (such as Scikit-learn's \texttt{MultinomialNB}), our model produced identical results, and was often marginally faster (as a result of the vectorized math and support for sparse matrices).
 	
+	The weakest part of the learning pipeline was probably the feature selection. Although lemmatization improved the information density significantly, we feel that there is probably a more effective representation of the data. If given more time, we may have experimented with word embeddings, but we are not sure how that would have worked with the models we chose - a neural network may have been able to handle that kind of representation, but it makes little sense for a classifier like Na\"ive Bayes.
+	
 \subsection{Nonlinear}
     Although performing much better than the baseline classifier, random forest was not as effective as Na{\"\i}veve Bayes in this classification problem. Our best validation accuracy using our own implementation was \texttt{0.8733}, which translated to \texttt{0.7664} accuracy on the test set. Our best validation accuracy using reference library was \texttt{0.8869}, which translated to \texttt{0.7833} accuracy on the test set.
     
@@ -243,15 +245,18 @@
 
 \subsection{Optional}
 	Working with SVMs on this project proved to be frustrating - the training was extremely slow when compared to Na\"ive Bayes, and the results were only marginally better, worse when we used additional methods to improve Na\"ive Bayes, like semi-supervised learning and ensemble methods.
+	
 %========================
 % Statement of Contributions
 %========================
 \section{Statement of Contributions}
+It should be noted that we were originally a group of three, but the third member had to withdraw from the course. Fortunately, most of her contributions were well-separated from ours (she was working on a KNN classifier), so removing her work from the final submission was simple.
 We hereby state that all the work presented in this report is that of the authors.
 \subsection{Christopher Glasz}
     I implemented the code for feature selection, as well as the linear model (Na\"ive Bayes) and the optional method (SVM). I also produced the code for semi-supervised learning, and the sections of the report related to this work.
-\subsection{Truong Hoai Phuoc}
+\subsection{Hoai Phuoc Truong}
     Hoai Phuoc Truong was responsible for the introduction of the report. He was also responsible for the implementation of nonlinear model and writing up nonlinear section of the report.
+    
  
 %========================
 % References
@@ -265,12 +270,5 @@ Bird, Steven, Edward Loper and Ewan Klein (2009), Natural Language Processing wi
 \bibitem{sklearn} 
 Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
 \end{thebibliography}
-
-
-
-%========================
-% Appendix
-%========================
-\section{Appendix}
  
 \end{document}
