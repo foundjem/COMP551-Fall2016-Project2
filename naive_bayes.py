@@ -50,14 +50,9 @@ class multinomial_nb(BaseEstimator, ClassifierMixin):
 	def predict_proba(self, X):
 		return np.exp(self.predict_log_proba(X))
 
-	def predict(self, X, return_probs=False):
-		# Report class with highest probability
+	def predict(self, X):
 		log_probs = self.predict_log_proba(X)
-		labels = self.lb_.inverse_transform(log_probs)
-		if return_probs:
-			probs = np.exp(np.max(log_probs, axis=1))
-			return labels, probs
-		return labels
+		return self.lb_.inverse_transform(log_probs)
 
 	def score(self, X, y):
 		predicted = self.predict(X)
@@ -124,14 +119,9 @@ class bernoulli_nb(object):
 	def predict_proba(self, X):
 		return np.exp(self.predict_log_proba(X))
 
-	def predict(self, X, return_probs=False):
-		# Report class with highest probability
+	def predict(self, X):
 		log_probs = self.predict_log_proba(X)
-		labels = self.lb_.inverse_transform(log_probs)
-		if return_probs:
-			probs = np.exp(np.max(log_probs, axis=1))
-			return labels, probs
-		return labels
+		return self.lb_.inverse_transform(log_probs)
 
 	def score(self, X, y):
 		predicted = self.predict(X)
