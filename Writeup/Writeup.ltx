@@ -47,11 +47,11 @@
 % Problem Representation
 %========================
 \section{Problem Representation}
-	We chose to represent the text data as vectors of TF-IDF scores. We initially implemented our own code to calculate these feature vectors, but eventually turned to the Scikit-learn \cite{sklearn} \texttt{CountVectorizer} and \texttt{TfidfTransformer} functions to produce them for us, to speed up the calculation time.
+	We chose to represent the text data as vectors of TF-IDF scores. We initially implemented our own code to calculate these feature vectors, but eventually turned to the Scikit-learn \texttt{CountVectorizer} and \texttt{TfidfTransformer} functions to produce them for us, to speed up the calculation time.
 	
 	At the outset, we had planned on using the 2,000 most common unigrams and the 200 most common bigrams as features, but this proved to be ineffective. We improved our classification accuracy (at the cost of feature preprocessing time) by increasing to 90,000 unigram and 10,000 bigram TF-IDF scores, for a total of 100K features. Along the way we tried 22K and 55K features (both with a 10/1 unigram-bigram ratio), and found that the performance of our models just continued to increase as we added more features, so we settled on a nice even 100K, as that's just about how many unique terms exist in the training corpus.
 	
-	Our performance was further improved by lemmatizing the input tokens using NLTK's \texttt{WordNetLemmatizer} \cite{nltk}. This prevented terms carrying the same information (e.g. "authenticate" and "authenticated") from being treated as two separate features. By tagging words by their part of speech before passing them to the lemmatizer, we were able to further improve our features (by reducing terms like "is", "are", and "am" to their common meaning of "be"). This process greatly increased the computation time, but was well worth it, as we only needed to calculate the feature vectors once.
+	Our performance was further improved by lemmatizing the input tokens using NLTK's \texttt{WordNetLemmatizer}. This prevented terms carrying the same information (e.g. "authenticate" and "authenticated") from being treated as two separate features. By tagging words by their part of speech before passing them to the lemmatizer, we were able to further improve our features (by reducing terms like "is", "are", and "am" to their common meaning of "be"). This process greatly increased the computation time, but was well worth it, as we only needed to calculate the feature vectors once.
 	
 	Another decision we made over the course of the project was from where to extract the features. Early on, we were very strict about not using the text in the test corpus to select features, as we did not want to inadvertently influence the training of the model with information from set-aside data. However, as we increased the number of features, the difference between the set of most common words in the training corpus and in the combined training and testing corpora became negligible. Eventually we decided to produce 4 datasets:
 	\begin{enumerate}
@@ -74,16 +74,17 @@
 	
 	Our Na\"ive Bayes implementation went through an extensive evolutionary process, and the final product is extremely efficient. The first several iterations of the code used iterative methods to compute feature and class probabilities, and training took several minutes, sometimes as long as an hour. However, once we made the move to using sparse matrices, the computation time was cut down significantly. This also allowed us to expand our feature set from 22,000 to 100,000 features without worrying about running out of memory. 
 	
-	Our code was further optimized by vectorizing nearly all of the calculations. Early iterations of our implementation had us manually splitting the dataset by class and calculating probabilities individually for each feature and each class. This is an incredibly inefficient way to work. We optimized by converting our output vector of labels to a one-hot vector encoding using Scikit-learn's \texttt{LabelBinarizer} \cite{sklearn}. This allowed us to split the set using a simple matrix multiplication, and calculating feature and class probabilities was boiled down to a couple summations down the correct axes. Coupled with the use of sparse matrices, this reduced our training computation time from the order of hours to seconds.
+	Our code was further optimized by vectorizing nearly all of the calculations. Early iterations of our implementation had us manually splitting the dataset by class and calculating probabilities individually for each feature and each class. This is an incredibly inefficient way to work. We optimized by converting our output vector of labels to a one-hot vector encoding using Scikit-learn's \texttt{LabelBinarizer}. This allowed us to split the set using a simple matrix multiplication, and calculating feature and class probabilities was boiled down to a couple summations down the correct axes. Coupled with the use of sparse matrices, this reduced our training computation time from the order of hours to seconds.
 
 	in addition to the above optimizations, we further improved our performance by expanding our training set with semi-supervised learning. After training a model on the labeled training corpus, we predicted the labels for the test set. We chose the labels that the model was most sure of (the ones with the highest probability), and added them to the training set before training again. We repeated this process several times, until there weren't any examples in the test set that the model was sufficiently sure of (this was typically less than a few thousand examples). 
 	
-	We also experimented with ensemble methods using Scikit-learn's \cite{sklearn} \texttt{BaggingClassifier} to improve our performance even further. We managed to reach the top of the Kaggle leaderboard by pulling out all the stops and using semi-supervised learning to train an ensemble of 100 bagged Na\"ve Bayes classifiers. This was our most successful model by far.
+	We also experimented with ensemble methods using Scikit-learn's \texttt{BaggingClassifier} to improve our performance even further. We managed to reach the top of the Kaggle leaderboard by pulling out all the stops and using semi-supervised learning to train an ensemble of 100 bagged Na\"ve Bayes classifiers. This was our most successful model by far.
 	
 	The hyper-parameter $\alpha$ was chosen with a 10-fold cross-validation grid search, and was consistently chosen to be 0.01.
 	
     \begin{table}[h!]
     \centering
+    \caption{Hyper-parameter grid search for Na\"ive Bayes using 100K features.}
     \begin{tabular}{ | c | c | }
     \hline
     $\alpha$ & CV Accuracy \\    \hline
@@ -99,7 +100,6 @@
     $0.01$ & 0.91458 \\    \hline
     $1$ & 0.90077 \\    \hline
     \end{tabular}
-    \caption{Hyper-parameter grid search for Na\"ive Bayes using 100K features.}
     \end{table}
 	
 \subsection{Nonlinear}
@@ -171,7 +171,7 @@
         \end{itemize}
 
 \subsection{Optional}
-	As our optional additional model, we used Scikit-learn's \cite{sklearn} \texttt{LinearSVC}. This SVM produced good results, but was very slow (it took several hours to train) and did not perform quite as well as our Na\"ive Bayes implementation. We introduced bagging and semi-supervised learning in exactly the same way we did with Na\"ive Bayes, but this only marginally improved the model's performance. Because of the tremendous amount of time it took to train the model, we were unable to do much experimentation with hyper-parameters.
+	As our optional additional model, we used Scikit-learn's \texttt{LinearSVC}. This SVM produced good results, but was very slow (it took several hours to train) and did not perform quite as well as our Na\"ive Bayes implementation. We introduced bagging and semi-supervised learning in exactly the same way we did with Na\"ive Bayes, but this only marginally improved the model's performance. Because of the tremendous amount of time it took to train the model, we were unable to do much experimentation with hyper-parameters.
 	
 	We also experimented with our own implementations of neural networks and K-Nearest Neighbors, but both of these performed poorly; KNN failed to produce more than 70\% cross-validated accuracy, and the neural network failed to produce any results at all (with the number of features in our dataset, and without the ability to use sparse matrices, the memory use ballooned to several gigabytes).
 	
@@ -184,6 +184,7 @@
 	
     \begin{table}[h!]
     \centering
+    \caption{Classification report on standard Multinomial Na\"ive Bayes}
     \begin{tabular}{ | c | c | c | c | c | }
     \hline
     Class 		& Precision & Recall & F1-Score \\\hline
@@ -193,11 +194,11 @@
     stat 		& 0.89 & 0.87 & 0.88 \\ \hline
     Average 	& 0.92 & 0.92 & 0.92 \\ \hline
     \end{tabular}
-    \caption{Classification report on standard Multinomial Na\"ive Bayes}
     \end{table}
     
     \begin{table}[h!]
     \centering
+    \caption{Validation confusion matrix on standard Multinomial Na\"ive Bayes}
     \begin{tabular}{ | c | c | c | c | c | c | }
     \hline
      		& cs & math & physics & stat \\ \hline
@@ -206,7 +207,6 @@
     physics 	& 179 & 31 & 3287 & 93\\ \hline
     stat 		& 322 & 37 & 76 & 2852\\ \hline
     \end{tabular}
-    \caption{Validation confusion matrix on standard Multinomial Na\"ive Bayes}
     \end{table} 
     
 
