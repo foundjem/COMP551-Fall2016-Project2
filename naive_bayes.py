@@ -266,11 +266,11 @@ if __name__ == '__main__':
 	sys.stdout.flush()
 	accuracy = model.fit(X_trn,Y_trn).score(X_val, Y_val)
 	print "Done."
-	title = "Learning Curves (Naive Bayes)"
-	cv = ShuffleSplit(X_all.shape[0], n_iter=100,
-						test_size=0.05, random_state=rng)
-	plot_learning_curve(model, title, X_all, Y_all, ylim=(0.7, 1.01),
-						cv=cv, n_jobs=1, train_sizes=np.linspace(.01, 1.0, 10)).show()
+#	title = "Learning Curves (Naive Bayes)"
+#	cv = ShuffleSplit(X_all.shape[0], n_iter=100,
+#						test_size=0.05, random_state=rng)
+#	plot_learning_curve(model, title, X_all, Y_all, ylim=(0.7, 1.01),
+#						cv=cv, n_jobs=1, train_sizes=np.linspace(.01, 1.0, 10)).show()
 
 	print "   Training on all data.................",
 	sys.stdout.flush()

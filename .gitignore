@@ -104,3 +104,7 @@ Writeup/Writeup.bbl
 *.xml
 
 Writeup/Writeup.blg
+
+*.zip
+
+directory_structure.jpg
