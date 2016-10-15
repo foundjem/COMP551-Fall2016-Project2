@@ -180,7 +180,7 @@
 %========================
 \section{Testing and Validation}
 \subsection{Linear}
-	Our Na\"ive Bayes model performed exceedingly well, both inside and outside of Kaggle. Like many other teams, our validation accuracy and cross-validated accuracy was significantly greater than the score on Kaggle. Our best-performing model (an ensemble of 100 Multinomial Na\"ive Bayes classifiers trained on data extended through semi-supervised learning) had 91.4121\% 10-fold cross-validated accuracy, but scored only 0.83188 on Kaggle. 
+	Our Na\"ive Bayes model performed exceedingly well, both inside and outside of Kaggle. Like many other teams, our validation accuracy and cross-validated accuracy was significantly greater than the score on Kaggle. Our best-performing model (an ensemble of 100 Multinomial Na\"ive Bayes classifiers trained on data extended through semi-supervised learning) had 91.4121\% 10-fold cross-validated accuracy, but scored only 0.83188 on Kaggle. Our accuracy on set-aside validation data was consistently very similar to the cross-validated accuracy, which leads us to believe that the model should generalize well.
 	
     \begin{table}[h!]
     \centering
@@ -195,6 +195,20 @@
     \end{tabular}
     \caption{Classification report on standard Multinomial Na\"ive Bayes}
     \end{table}
+    
+    \begin{table}[h!]
+    \centering
+    \begin{tabular}{ | c | c | c | c | c | c | }
+    \hline
+     		& cs & math & physics & stat \\ \hline
+    cs 		& 5284 & 145 & 113 & 182 \\ \hline
+    math 		& 161 & 4820 & 80 & 66 \\ \hline
+    physics 	& 179 & 31 & 3287 & 93\\ \hline
+    stat 		& 322 & 37 & 76 & 2852\\ \hline
+    \end{tabular}
+    \caption{Validation confusion matrix on standard Multinomial Na\"ive Bayes}
+    \end{table} 
+    
 
 \subsection{Nonlinear}
     
