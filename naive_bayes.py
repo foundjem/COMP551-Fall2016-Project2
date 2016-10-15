@@ -228,7 +228,7 @@ if __name__ == '__main__':
 
 	print "   Testing on validation data...........",
 	sys.stdout.flush()
-	accuracy = semi_supervised(model, X_trn, Y_trn, X_tst, 0.9).score(X_val, Y_val)
+	accuracy = semi_supervised(model, X_trn, Y_trn, X_val, 0.9).score(X_val, Y_val)
 	print "Done."
 	print "   Validation set accuracy:  %f" % accuracy
 
