@@ -75,13 +75,21 @@
 	
 	Our Na\"ive Bayes implementation went through an extensive evolutionary process, and the final product is extremely efficient. The first several iterations of the code used iterative methods to compute feature and class probabilities, and training took several minutes, sometimes as long as an hour. However, once we made the move to using sparse matrices, the computation time was cut down significantly. This also allowed us to expand our feature set from 22,000 to 100,000 features without worrying about running out of memory. 
 	
-	\begin{figure}[]
+	\begin{figure}[b]
 	\centering
 	\includegraphics[width=\columnwidth]{learning_curve}
 	\caption{The learning curve for standard Multinomial Na\"ive Bayes}
 	\end{figure}
 	
-    \begin{table}[b]
+	Our code was further optimized by vectorizing nearly all of the calculations. Early iterations of our implementation had us manually splitting the dataset by class and calculating probabilities individually for each feature and each class. This is an incredibly inefficient way to work. We optimized by converting our output vector of labels to a one-hot vector encoding using Scikit-learn's \texttt{LabelBinarizer}. This allowed us to split the set using a simple matrix multiplication, and calculating feature and class probabilities was boiled down to a couple summations down the correct axes. Coupled with the use of sparse matrices, this reduced our training computation time from the order of hours to seconds.
+
+	in addition to the above optimizations, we further improved our performance by expanding our training set with semi-supervised learning. After training a model on the labeled training corpus, we predicted the labels for the test set. We chose the labels that the model was most sure of (the ones with the highest probability), and added them to the training set before training again. We repeated this process several times, until there weren't any examples in the test set that the model was sufficiently sure of (this was typically less than a few thousand examples). 
+	
+	We also experimented with ensemble methods using Scikit-learn's \texttt{BaggingClassifier} to improve our performance even further. We managed to reach the top of the Kaggle leaderboard by pulling out all the stops and using semi-supervised learning to train an ensemble of 100 bagged Na\"ve Bayes classifiers. This was our most successful model by far.
+	
+	The hyper-parameter $\alpha$ was chosen with a 10-fold cross-validation grid search, and was consistently chosen to be 0.01.
+	
+    \begin{table}[t]
     \centering
     \caption{Hyper-parameter grid search for Na\"ive Bayes using 100K features.}
     \begin{tabular}{ | c | c | }
@@ -100,14 +108,6 @@
     $1$ & 0.90077 \\    \hline
     \end{tabular}
     \end{table}
-	
-	Our code was further optimized by vectorizing nearly all of the calculations. Early iterations of our implementation had us manually splitting the dataset by class and calculating probabilities individually for each feature and each class. This is an incredibly inefficient way to work. We optimized by converting our output vector of labels to a one-hot vector encoding using Scikit-learn's \texttt{LabelBinarizer}. This allowed us to split the set using a simple matrix multiplication, and calculating feature and class probabilities was boiled down to a couple summations down the correct axes. Coupled with the use of sparse matrices, this reduced our training computation time from the order of hours to seconds.
-
-	in addition to the above optimizations, we further improved our performance by expanding our training set with semi-supervised learning. After training a model on the labeled training corpus, we predicted the labels for the test set. We chose the labels that the model was most sure of (the ones with the highest probability), and added them to the training set before training again. We repeated this process several times, until there weren't any examples in the test set that the model was sufficiently sure of (this was typically less than a few thousand examples). 
-	
-	We also experimented with ensemble methods using Scikit-learn's \texttt{BaggingClassifier} to improve our performance even further. We managed to reach the top of the Kaggle leaderboard by pulling out all the stops and using semi-supervised learning to train an ensemble of 100 bagged Na\"ve Bayes classifiers. This was our most successful model by far.
-	
-	The hyper-parameter $\alpha$ was chosen with a 10-fold cross-validation grid search, and was consistently chosen to be 0.01.
 	
 \subsection{Nonlinear}
     \subsubsection{Implementation}
@@ -187,7 +187,6 @@
 %========================
 \section{Testing and Validation}
 \subsection{Linear}
-	Our Na\"ive Bayes model performed exceedingly well, both inside and outside of Kaggle. Like many other teams, our validation accuracy and cross-validated accuracy was significantly greater than the score on Kaggle. Our best-performing model (an ensemble of 100 Multinomial Na\"ive Bayes classifiers trained on data extended through semi-supervised learning) had 91.4121\% 10-fold cross-validated accuracy, but scored only 0.83188 on Kaggle. Our accuracy on set-aside validation data was consistently very similar to the cross-validated accuracy, which leads us to believe that the model should generalize well.
 	
     \begin{table}[h!]
     \centering
@@ -216,6 +215,8 @@
     \end{tabular}
     \end{table} 
     
+	Our Na\"ive Bayes model performed exceedingly well, both inside and outside of Kaggle. Like many other teams, our validation accuracy and cross-validated accuracy was significantly greater than the score on Kaggle. Our best-performing model (an ensemble of 100 Multinomial Na\"ive Bayes classifiers trained on data extended through semi-supervised learning) had 91.4121\% 10-fold cross-validated accuracy, but scored only 0.83188 on Kaggle. Our accuracy on set-aside validation data was consistently very similar to the cross-validated accuracy, which leads us to believe that the model should generalize well.
+    
 
 \subsection{Nonlinear}
     
@@ -226,7 +227,7 @@
     \label{my-label}
     \begin{tabular}{|c|c|c|c|c|}
     \hline
-    No & k & min\_node\_size & validation\_accuracy & Note \\
+    No & k & min\_node\_size & val\_acc & Note \\
     \hline
     1 & 500 & 1 & 0.8803 & 55k features \\
     \hline
