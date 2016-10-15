@@ -11,7 +11,7 @@
 \usepackage{url}
 \usepackage{graphicx}
 \usepackage{tabularx}
-\graphicspath{ {plots/} }
+\graphicspath{ {../plots/} }
 \usepackage{subcaption}
 \usepackage[backend=bibtex, style=numeric-comp]{biblatex}
 
@@ -75,15 +75,13 @@
 	
 	Our Na\"ive Bayes implementation went through an extensive evolutionary process, and the final product is extremely efficient. The first several iterations of the code used iterative methods to compute feature and class probabilities, and training took several minutes, sometimes as long as an hour. However, once we made the move to using sparse matrices, the computation time was cut down significantly. This also allowed us to expand our feature set from 22,000 to 100,000 features without worrying about running out of memory. 
 	
-	Our code was further optimized by vectorizing nearly all of the calculations. Early iterations of our implementation had us manually splitting the dataset by class and calculating probabilities individually for each feature and each class. This is an incredibly inefficient way to work. We optimized by converting our output vector of labels to a one-hot vector encoding using Scikit-learn's \texttt{LabelBinarizer}. This allowed us to split the set using a simple matrix multiplication, and calculating feature and class probabilities was boiled down to a couple summations down the correct axes. Coupled with the use of sparse matrices, this reduced our training computation time from the order of hours to seconds.
-
-	in addition to the above optimizations, we further improved our performance by expanding our training set with semi-supervised learning. After training a model on the labeled training corpus, we predicted the labels for the test set. We chose the labels that the model was most sure of (the ones with the highest probability), and added them to the training set before training again. We repeated this process several times, until there weren't any examples in the test set that the model was sufficiently sure of (this was typically less than a few thousand examples). 
+	\begin{figure}[]
+	\centering
+	\includegraphics[width=\columnwidth]{learning_curve}
+	\caption{The learning curve for standard Multinomial Na\"ive Bayes}
+	\end{figure}
 	
-	We also experimented with ensemble methods using Scikit-learn's \texttt{BaggingClassifier} to improve our performance even further. We managed to reach the top of the Kaggle leaderboard by pulling out all the stops and using semi-supervised learning to train an ensemble of 100 bagged Na\"ve Bayes classifiers. This was our most successful model by far.
-	
-	The hyper-parameter $\alpha$ was chosen with a 10-fold cross-validation grid search, and was consistently chosen to be 0.01.
-	
-    \begin{table}[h!]
+    \begin{table}[b]
     \centering
     \caption{Hyper-parameter grid search for Na\"ive Bayes using 100K features.}
     \begin{tabular}{ | c | c | }
@@ -102,6 +100,14 @@
     $1$ & 0.90077 \\    \hline
     \end{tabular}
     \end{table}
+	
+	Our code was further optimized by vectorizing nearly all of the calculations. Early iterations of our implementation had us manually splitting the dataset by class and calculating probabilities individually for each feature and each class. This is an incredibly inefficient way to work. We optimized by converting our output vector of labels to a one-hot vector encoding using Scikit-learn's \texttt{LabelBinarizer}. This allowed us to split the set using a simple matrix multiplication, and calculating feature and class probabilities was boiled down to a couple summations down the correct axes. Coupled with the use of sparse matrices, this reduced our training computation time from the order of hours to seconds.
+
+	in addition to the above optimizations, we further improved our performance by expanding our training set with semi-supervised learning. After training a model on the labeled training corpus, we predicted the labels for the test set. We chose the labels that the model was most sure of (the ones with the highest probability), and added them to the training set before training again. We repeated this process several times, until there weren't any examples in the test set that the model was sufficiently sure of (this was typically less than a few thousand examples). 
+	
+	We also experimented with ensemble methods using Scikit-learn's \texttt{BaggingClassifier} to improve our performance even further. We managed to reach the top of the Kaggle leaderboard by pulling out all the stops and using semi-supervised learning to train an ensemble of 100 bagged Na\"ve Bayes classifiers. This was our most successful model by far.
+	
+	The hyper-parameter $\alpha$ was chosen with a 10-fold cross-validation grid search, and was consistently chosen to be 0.01.
 	
 \subsection{Nonlinear}
     \subsubsection{Implementation}
@@ -213,7 +219,6 @@
 
 \subsection{Nonlinear}
     
-    Our best validation accuracy achieved was \texttt{0.8733} with 40 trees, 10 features and 20 minimum node size. To compare our implementation with the reference implementation of scikit-learn, we also did several runs using the library on 55000 and 100000 generated features, since the run time is much better compared to our implementation). The run time was approximately 4 to 5 times better due to optimization of matrix slicing process. That said, we were not able to use the reference library to train for beyond 1000 trees due to memory limitation. The following table describes the grid search using scikit-learn library. Value of \texttt{m} (number of features used at each iteration) was chosen to be square root of the number of features (by default from the library).
     
     \begin{table}[]
     \centering
@@ -235,6 +240,8 @@
     \hline
     \end{tabular}
     \end{table}
+    
+    Our best validation accuracy achieved was \texttt{0.8733} with 40 trees, 10 features and 20 minimum node size. To compare our implementation with the reference implementation of scikit-learn, we also did several runs using the library on 55000 and 100000 generated features, since the run time is much better compared to our implementation). The run time was approximately 4 to 5 times better due to optimization of matrix slicing process. That said, we were not able to use the reference library to train for beyond 1000 trees due to memory limitation. The following table describes the grid search using scikit-learn library. Value of \texttt{m} (number of features used at each iteration) was chosen to be square root of the number of features (by default from the library).
     
     It is noticeable that using 100000 features improved the validation accuracy. Despite being able to train with the number of trees and number of features significantly larger, the reference library did not deliver a significant improvement in terms of validation accuracy. Reference library best validation accuracy was \texttt{0.8869} while our implementation best validation accuracy was \texttt{0.8733}. Despite this, the performance of random forest was worse compared to that of Na{\"\i}ve Bayes.
 
