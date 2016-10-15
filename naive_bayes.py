@@ -176,8 +176,6 @@ if __name__ == '__main__':
 	print "Vanilla Multinomial Naive Bayes:"
 	print "   Grid search for best parameters......",
 	sys.stdout.flush()
-#	model = multinomial_nb(0.01)
-#	model.fit(X_trn, Y_trn)
 	model = GridSearchCV(multinomial_nb(),
 						 {'alpha':np.logspace(-20,0,11)},
 						  cv=10, n_jobs=-1)
@@ -185,9 +183,6 @@ if __name__ == '__main__':
 	cv_results = model.grid_scores_
 	model = model.best_estimator_
 	print "Done."
-	print "   Grid search results:"
-	for k in cv_results:
-		print "      %s" % str(k)
 	print "   Best parameter set:"
 	for k in model.get_params().keys():
 		print "      %s: %s" % (k,model.get_params()[k])
@@ -197,15 +192,13 @@ if __name__ == '__main__':
 	accuracy = model.fit(X_trn,Y_trn).score(X_val, Y_val)
 	predicted = model.predict(X_val)
 	print "Done."
-	print "   Validation data confusion matrix:"
-	print confusion_matrix(Y_val, predicted)
 	print "   Classification report:\n   ",
 	print classification_report(Y_val, predicted, target_names=model.classes_)
-	title = "Learning Curves (Naive Bayes)"
-	cv = ShuffleSplit(X_all.shape[0], n_iter=100,
-						test_size=0.05, random_state=rng)
-	plot_learning_curve(model, title, X_all, Y_all, ylim=(0.7, 1.01),
-						cv=cv, n_jobs=4, train_sizes=np.linspace(.01, 1.0, 20)).show()
+#	title = "Learning Curves (Naive Bayes)"
+#	cv = ShuffleSplit(X_all.shape[0], n_iter=100,
+#						test_size=0.05, random_state=rng)
+#	plot_learning_curve(model, title, X_all, Y_all, ylim=(0.7, 1.01),
+#						cv=cv, n_jobs=4, train_sizes=np.linspace(.01, 1.0, 20)).show()
 
 	print "   Training on all data.................",
 	sys.stdout.flush()
@@ -233,7 +226,13 @@ if __name__ == '__main__':
 	print "Semi-supervised Multinomial Naive Bayes:"
 	print "   Using vanilla parameters"
 
-	print "   Semi-supervised learning.............",
+	print "   Testing on validation data...........",
+	sys.stdout.flush()
+	accuracy = semi_supervised(model, X_trn, Y_trn, X_tst, 0.9).score(X_val, Y_val)
+	print "Done."
+	print "   Validation set accuracy:  %f" % accuracy
+
+	print "   Training on all data.................",
 	sys.stdout.flush()
 	model = semi_supervised(model, X_all, Y_all, X_tst, 0.9)
 	print "Done."
@@ -271,7 +270,7 @@ if __name__ == '__main__':
 	cv = ShuffleSplit(X_all.shape[0], n_iter=100,
 						test_size=0.05, random_state=rng)
 	plot_learning_curve(model, title, X_all, Y_all, ylim=(0.7, 1.01),
-						cv=cv, n_jobs=1, train_sizes=np.linspace(.01, 1.0, 20)).show()
+						cv=cv, n_jobs=1, train_sizes=np.linspace(.01, 1.0, 10)).show()
 
 	print "   Training on all data.................",
 	sys.stdout.flush()
