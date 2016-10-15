@@ -2,7 +2,8 @@
 2nd project for COMP 551 Fall 2016
 
 # To generate training features:
-Run `$ python feature_vectorize.py` to generate the feature matrices. This will produces several `X*.npz` files, which store sparse representations of the feature vectors, and `Y*.csv` files, which are the labels corresponding to each of the datasets.
+1. Make sure that `train_in.csv`, `train_out.csv`, and `test_in .csv` are in the `datasets` directory, which should in turn be in the root directory. 
+2. Run `$ python feature_vectorize.py` to generate the feature matrices. This will produces several `X*.npz` files, which store sparse representations of the feature vectors, and `Y*.csv` files, which are the labels corresponding to each of the datasets.
 
 # To run Naive Bayes:
 1. Make sure all `X*.npz` and `Y*.csv` files are in the same directory as `naive_bayes.py`
