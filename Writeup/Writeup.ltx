@@ -85,7 +85,7 @@
 
 	in addition to the above optimizations, we further improved our performance by expanding our training set with semi-supervised learning. After training a model on the labeled training corpus, we predicted the labels for the test set. We chose the labels that the model was most sure of (the ones with the highest probability), and added them to the training set before training again. We repeated this process several times, until there weren't any examples in the test set that the model was sufficiently sure of (this was typically less than a few thousand examples). 
 	
-	We also experimented with ensemble methods using Scikit-learn's \texttt{BaggingClassifier} to improve our performance even further. We managed to reach the top of the Kaggle leaderboard by pulling out all the stops and using semi-supervised learning to train an ensemble of 100 bagged Na\"ve Bayes classifiers. This was our most successful model by far.
+	We also experimented with ensemble methods using Scikit-learn's \texttt{BaggingClassifier} to improve our performance even further. We managed to reach the top of the Kaggle leaderboard by pulling out all the stops and using semi-supervised learning to train an ensemble of 100 bagged Na\"ive Bayes classifiers. This was our most successful model by far.
 	
 	The hyper-parameter $\alpha$ was chosen with a 10-fold cross-validation grid search, and was consistently chosen to be 0.01.
 	
@@ -215,8 +215,7 @@
     \end{tabular}
     \end{table} 
     
-	Our Na\"ive Bayes model performed exceedingly well, both inside and outside of Kaggle. Like many other teams, our validation accuracy and cross-validated accuracy was significantly greater than the score on Kaggle. Our best-performing model (an ensemble of 100 Multinomial Na\"ive Bayes classifiers trained on data extended through semi-supervised learning) had 91.4121\% 10-fold cross-validated accuracy, but scored only 0.83188 on Kaggle. Our accuracy on set-aside validation data was consistently very similar to the cross-validated accuracy, which leads us to believe that the model should generalize well.
-    
+	Our Na\"ive Bayes model performed exceedingly well. Like many other teams, our validation accuracy and cross-validated accuracy (computed with Scikit-learn's \texttt{cross\_val\_score} function) was significantly greater than the score on Kaggle. Our best-performing model (an ensemble of 100 Multinomial Na\"ive Bayes classifiers trained on data extended through semi-supervised learning) had 91.4121\% 10-fold cross-validated accuracy, but scored only 0.83188 when submitted to the site. Our accuracy on the set-aside validation data was consistently very similar to the cross-validated accuracy, which leads us to believe that the model should generalize well.
 
 \subsection{Nonlinear}
     
